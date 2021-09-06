@@ -4,7 +4,7 @@ Tested to work with Debian Buster and Bullseye.
 It is meant to be used from Python console rather than standalone.
 
 # Features
-* Indent - Deindent
+* Indent - Unindent
 * Comment - Uncomment
 * Search - Replace
 * Undo - Redo
