@@ -17,11 +17,11 @@ import importlib
 # https://docs.python.org/3/library/tkinter.html
 #
 # If you are about to use tkinter Python-module in a program with complexity
-# similar or larger than this editor, consider using some other GUI-library
-# like Qt or completely other language like Tcl to name one. 
+# similar or larger than in this editor, consider using some other GUI-library
+# like Qt or completely another language like Tcl to name one. 
 ###############################################################################
 #
-#TODO: fix gotoline, add linenums?
+#TODO:
 
 # Below is short example from one book about how to use option database. I
 # am not using option database in this editor.
@@ -64,7 +64,6 @@ class Editor(Toplevel):
 			self.menufont = Font(family='Noto Mono', size=20)
 		
 		self.tab_width = self.font.measure(4*' ')
-		self.flag_added = 0 # for goto
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
 		self.search_pos = 0
@@ -291,33 +290,22 @@ class Editor(Toplevel):
 	
 	
 	def do_gotoline(self, event=None):
-		if self.flag_added:
-			self.contents.delete(self.flag_added, self.flag_added + "lineend")
-			self.flag_added = 0
 		try:
 			line = self.entry.get().strip() + '.0'
+			self.contents.focus_set()
 			self.contents.see(line)
-			if len(self.contents.get(line, line + "lineend")) == 0:
-				self.contents.insert(line, 10*'\t')
-				self.flag_added = line
-				
-			self.contents.tag_remove('sel', '1.0', END)
-			self.contents.tag_add('sel', line, line + "lineend")
-
+			self.contents.event_generate('<Button-1>')
+			self.stop_gotoline()
 		except TclError as e:
 			print(e)
 	
 	
 	def stop_gotoline(self, event=None):
-		if self.flag_added:
-			self.contents.delete(self.flag_added, self.flag_added + "lineend")
-			self.flag_added = 0
 		self.entry.bind("<Return>", self.load)
 		self.bind("<Escape>", lambda e: self.iconify())
 		self.entry.delete(0,END)
 		self.entry.insert(0,self.filename)
 		self.title(self.titletext)
-		self.contents.focus_set()
 		
 	
 	def gotoline(self, event=None):
