@@ -294,7 +294,6 @@ class Editor(Toplevel):
 			line = self.entry.get().strip() + '.0'
 			self.contents.focus_set()
 			self.contents.see(line)
-			self.contents.event_generate('<Button-1>')
 			self.stop_gotoline()
 		except TclError as e:
 			print(e)
