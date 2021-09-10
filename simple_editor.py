@@ -18,7 +18,7 @@ import importlib
 #
 # If you are about to use tkinter Python-module in a program with complexity
 # similar or larger than in this editor, consider using some other GUI-library
-# like Qt or completely another language like Tcl to name one. 
+# like Qt or completely other language like Tcl to name one. 
 ###############################################################################
 #
 #TODO:
@@ -294,6 +294,7 @@ class Editor(Toplevel):
 			line = self.entry.get().strip() + '.0'
 			self.contents.focus_set()
 			self.contents.see(line)
+			self.contents.mark_set('insert', line)
 			self.stop_gotoline()
 		except TclError as e:
 			print(e)
