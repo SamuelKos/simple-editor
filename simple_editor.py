@@ -5,6 +5,8 @@ BOTTOM, BOTH, LEFT, X, END, INSERT, SEL_FIRST, SEL_LAST
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import FileDialog
 from tkinter.font import Font
+from os.path import abspath
+
 # for reimport edited file: 
 import sys
 import importlib
@@ -154,8 +156,13 @@ class Editor(Toplevel):
 					self.contents.insert(INSERT, file.read())
 					self.filename = self.local
 					self.entry.insert(0, self.filename)
+					self.flag_init = False
 			except Exception as e:
 				print(e)
+				self.filename = None
+		
+		if self.filename == None:
+			self.flag_init = True
 
 
 	def do_nothing(self, event=None):
@@ -224,42 +231,71 @@ class Editor(Toplevel):
 		tmp = self.entry.get()
 		save = self.filename
 		asked = False
-
-		if self.filename in (tmp, None) or no_such_file:
-			d = FileDialog(self)
+		
+		# Check if user entered manually filepath (in entry)
+		# before pressing Open:
+		if self.flag_init and tmp != '' and tmp != None:
 			
-			d.dirs.configure(font=self.font)
-			d.files.configure(font=self.font)
-			d.cancel_button.configure(font=self.menufont)
-			d.filter.configure(font=self.menufont)
-			d.filter_button.configure(font=self.menufont)
-			d.ok_button.configure(font=self.menufont)
-			d.selection.configure(font=self.menufont)
-			
-			if self.hdpi_screen == True:
-				d.dirsbar.configure(width=20)
-				d.filesbar.configure(width=20)
+			# If trying to open from curdir without full path
+			if '/' not in tmp:
+				tmp = abspath('.') + '/' + tmp
 				
-			self.filename = d.go('.')
-			
-			asked = True
-			if self.filename == None:  #pressed close or cancel in filedialog
-				self.filename = save
-		else:
 			self.filename = tmp
+			
+			try:
+				with open(self.filename) as file:
+					self.contents.delete('1.0', END)
+					self.entry.delete(0, END)
+					self.contents.insert(INSERT, file.read())
+					self.entry.insert(0, self.filename)
+					self.flag_init = False
+			except Exception as e:
+				print(e)
+				self.filename = None
+			################################### End of Check
+		else:
 
-		try:
-			with open(self.filename, encoding='utf-8') as file:
-				self.contents.delete('1.0', END)
-				for line in file.readlines():
-					self.contents.insert(INSERT, line)
-				self.entry.delete(0, END)
-				self.entry.insert(0, self.filename)
-				self.contents.edit_reset()
-		except Exception:
-			self.filename = save #file tmp does not exist, reverting back to old file and open filedialog
-			if not no_such_file and not asked:
-				self.load(no_such_file=True)
+			if self.filename in (tmp, None) or no_such_file:
+				d = FileDialog(self)
+				
+				d.dirs.configure(font=self.font)
+				d.files.configure(font=self.font)
+				d.cancel_button.configure(font=self.menufont)
+				d.filter.configure(font=self.menufont)
+				d.filter_button.configure(font=self.menufont)
+				d.ok_button.configure(font=self.menufont)
+				d.selection.configure(font=self.menufont)
+				
+				if self.hdpi_screen == True:
+					d.dirsbar.configure(width=20)
+					d.filesbar.configure(width=20)
+					
+				self.filename = d.go('.')
+				
+				asked = True
+				if self.filename == None:  #pressed close or cancel in filedialog
+					self.filename = save
+			else:
+				# If trying to open from curdir without full path
+				if '/' not in tmp:
+					tmp = abspath('.') + '/' + tmp
+					
+				self.filename = tmp
+	
+			try:
+				with open(self.filename, encoding='utf-8') as file:
+					self.contents.delete('1.0', END)
+					for line in file.readlines():
+						self.contents.insert(INSERT, line)
+					self.entry.delete(0, END)
+					self.entry.insert(0, self.filename)
+					self.contents.edit_reset()
+					self.current = None
+					self.flag_init = False
+			except Exception:
+				self.filename = save #file tmp does not exist, reverting back to old file and open filedialog
+				if not no_such_file and not asked:
+					self.load(no_such_file=True)
 		
 	
 	def save(self):
@@ -457,6 +493,9 @@ class Editor(Toplevel):
 		for i in range(len(tmp)):
 			if tmp[i] != '\t':
 				break
+		
+		# Check if indentlevel is going to deepen but not in comment:
+		if tmp.rstrip()[-2] == ':' and tmp.lstrip()[0] != '#': i += 1
 		
 		self.contents.insert(INSERT, '\n') # Manual newline because return is overrided.
 		self.contents.insert(INSERT, i*'\t')
