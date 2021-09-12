@@ -9,6 +9,7 @@ from os.path import abspath
 
 # for reimport edited file: 
 import sys
+import traceback
 import importlib
 
 ###############################################################################
@@ -71,6 +72,9 @@ class Editor(Toplevel):
 		self.search_pos = 0
 		self.old_word = ''
 		self.new_word = ''
+		self.errlines = None
+		self.num_err = 0
+		self.err_index = 0
 		self.state = 'normal'
 ##		self.pic = Image("photo", file="./icons/text-editor.png")
 ##		self.tk.call('wm','iconphoto', self._w, self.pic)
@@ -137,6 +141,7 @@ class Editor(Toplevel):
 		self.popup.add_command(label="   uncomment", command=self.uncomment)
 		self.popup.add_command(label="<<  unindent", command=self.unindent)
 		self.popup.add_command(label="    reimport", command=self.reload_file)
+		self.popup.add_command(label="    nxterror", command=self.next_error)
 		self.popup.add_command(label="        undo", command=self.undo_override)
 		self.popup.add_command(label="        redo", command=self.redo_override)
 		self.popup.add_command(label="        help", command=self.help)
@@ -151,6 +156,10 @@ class Editor(Toplevel):
 		self.local = file
 
 		if self.local:
+			# Check if trying to open from curdir without full path
+			if '/' not in self.local:
+				self.local = abspath('.') + '/' + self.local
+				
 			try:
 				with open(self.local) as file:
 					self.contents.insert(INSERT, file.read())
@@ -169,29 +178,98 @@ class Editor(Toplevel):
 		pass
 
 
+	def next_error(self):
+		''' Show next error from last import.
+		'''
+		
+		if self.errlines:
+			self.contents.focus_set()
+			line = str(self.errlines[self.err_index]) + '.0'
+			self.contents.see(line)
+			self.contents.mark_set('insert', line)
+			self.err_index += 1
+		
+		if self.err_index == self.num_err:
+			self.err_index = 0
+	
+	
 	def reload_file(self):
-		"""reimport current file
+		""" Reimport current file. 
+		
+			Note: if there is something wrong in
+			to be imported file (exception raises), import will fail and 
+			there will not be reference to it in sys.modules
+			if importing for the first time.
+		
+			https://stackoverflow.com/questions/2052390/manually-raising-throwing-an-exception-in-python
 		"""
 		self.save()
+		self.errlines = None
+		self.num_err = 0
+		self.err_index = 0
 		
 		#get basename:
 		index = self.filename.rfind('/') + 1
 		module_name = self.filename[index:-3] #-3: remove trailing .py
-		
-		try:
+				
+		if module_name in sys.modules.keys():
 			# Check for module-reference in sys.modules.
-			# If try succeeds, it means the file currently open in editor 
-			# has been already imported at least once before. And therefore
+			# True means the file currently open in editor 
+			# has already been imported at least once before. And therefore
 			# it can be reloaded.
-			self.current = sys.modules[module_name] 
-			importlib.reload(self.current)
-		except:
-			# Try failed becouse the file has not been imported and so there
+			
+			try:
+				self.current = sys.modules[module_name] 
+				importlib.reload(self.current)
+			except:
+				exc_type, exc_value, exc_traceback = sys.exc_info()
+				self.errlines = list()
+				tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
+				if 'reload_file' in tb[1]:
+					i = 0
+					while True:
+						if self.filename in tb[i]: break
+						i += 1
+					tb[:] = tb[i:]
+					
+				for item in tb:
+					print(item)
+					if self.filename in item:
+						tmp = item[item.index('line') + 5:]
+						tmp = tmp[:tmp.index(',')]
+						self.errlines.append(tmp)
+				self.num_err = len(self.errlines)
+				
+				#raise
+
+		else:
+			# File has not been imported and so there
 			# is no reference to it in sys.modules and so it can not be
 			# reloaded. If so it must be imported. Also saving reference to it.
-			self.current = importlib.import_module(module_name)
+			try:
+				self.current = importlib.import_module(module_name)
+			except:
+				exc_type, exc_value, exc_traceback = sys.exc_info()
+				self.errlines = list()
+				tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
+				if 'reload_file' in tb[1]:
+					i = 0
+					while True:
+						if self.filename in tb[i]: break
+						i += 1
+					tb[:] = tb[i:]
+				
+				for item in tb: 
+					print(item)
+					if self.filename in item:
+						tmp = item[item.index('line') + 5:]
+						tmp = tmp[:tmp.index(',')]
+						self.errlines.append(tmp)
+				self.num_err = len(self.errlines)
+				
+				#raise
 		
-
+		
 	def tabify(self, line):
 		
 		indent_stop_index = 0
