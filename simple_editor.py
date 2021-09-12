@@ -24,7 +24,7 @@ import importlib
 # like Qt or completely other language like Tcl to name one. 
 ###############################################################################
 #
-#TODO:
+#TODO: Test handle_exception with multilevel importing
 
 # Below is short example from one book about how to use option database. I
 # am not using option database in this editor.
@@ -176,6 +176,32 @@ class Editor(Toplevel):
 
 	def do_nothing(self, event=None):
 		pass
+		
+		
+	def handle_exception(self):
+	
+		exc_type, exc_value, exc_traceback = sys.exc_info()
+		self.errlines = list()
+		tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
+		
+		# Skip possible 'frozen' -messages 
+		if 'reload_file' in tb[1]:
+			i = 0
+			while True:
+				if self.filename in tb[i]: break
+				i += 1
+			tb[:] = tb[i:]
+					
+		for item in tb:
+			print(item)
+			if self.filename in item:
+				tmp = item[item.index('line') + 5:]
+				tmp = tmp[:tmp.index(',')]
+				self.errlines.append(tmp)
+		self.num_err = len(self.errlines)
+				
+		#raise
+
 
 
 	def next_error(self):
@@ -213,6 +239,7 @@ class Editor(Toplevel):
 		module_name = self.filename[index:-3] #-3: remove trailing .py
 				
 		if module_name in sys.modules.keys():
+			
 			# Check for module-reference in sys.modules.
 			# True means the file currently open in editor 
 			# has already been imported at least once before. And therefore
@@ -222,54 +249,19 @@ class Editor(Toplevel):
 				self.current = sys.modules[module_name] 
 				importlib.reload(self.current)
 			except:
-				exc_type, exc_value, exc_traceback = sys.exc_info()
-				self.errlines = list()
-				tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
-				if 'reload_file' in tb[1]:
-					i = 0
-					while True:
-						if self.filename in tb[i]: break
-						i += 1
-					tb[:] = tb[i:]
-					
-				for item in tb:
-					print(item)
-					if self.filename in item:
-						tmp = item[item.index('line') + 5:]
-						tmp = tmp[:tmp.index(',')]
-						self.errlines.append(tmp)
-				self.num_err = len(self.errlines)
+				self.handle_exception()
 				
-				#raise
-
 		else:
 			# File has not been imported and so there
 			# is no reference to it in sys.modules and so it can not be
 			# reloaded. If so it must be imported. Also saving reference to it.
+			
 			try:
 				self.current = importlib.import_module(module_name)
 			except:
-				exc_type, exc_value, exc_traceback = sys.exc_info()
-				self.errlines = list()
-				tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
-				if 'reload_file' in tb[1]:
-					i = 0
-					while True:
-						if self.filename in tb[i]: break
-						i += 1
-					tb[:] = tb[i:]
-				
-				for item in tb: 
-					print(item)
-					if self.filename in item:
-						tmp = item[item.index('line') + 5:]
-						tmp = tmp[:tmp.index(',')]
-						self.errlines.append(tmp)
-				self.num_err = len(self.errlines)
-				
-				#raise
-		
-		
+				self.handle_exception()
+
+
 	def tabify(self, line):
 		
 		indent_stop_index = 0
@@ -571,10 +563,7 @@ class Editor(Toplevel):
 		for i in range(len(tmp)):
 			if tmp[i] != '\t':
 				break
-		
-		# Check if indentlevel is going to deepen but not in comment:
-		if tmp.rstrip()[-2] == ':' and tmp.lstrip()[0] != '#': i += 1
-		
+
 		self.contents.insert(INSERT, '\n') # Manual newline because return is overrided.
 		self.contents.insert(INSERT, i*'\t')
 		self.contents.edit_separator()
