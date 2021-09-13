@@ -7,10 +7,10 @@ from tkinter.filedialog import FileDialog
 from tkinter.font import Font
 from os.path import abspath
 
-# for reimport edited file: 
-import sys
-import traceback
-import importlib
+# for executing edited file in the same env than this editor, which is nice:
+# It means you have your installed dependencies available. By self.run()
+import subprocess
+
 
 ###############################################################################
 # config(**options) Modifies one or more widget options. If no options are
@@ -24,7 +24,7 @@ import importlib
 # like Qt or completely other language like Tcl to name one. 
 ###############################################################################
 #
-#TODO: Test handle_exception with multilevel importing
+#TODO:
 
 # Below is short example from one book about how to use option database. I
 # am not using option database in this editor.
@@ -56,7 +56,6 @@ class Editor(Toplevel):
 		self.titletext = 'Simple Editor'
 		self.title(self.titletext)
 		self.filename = None
-		self.current = None #for reimport
 		self.hdpi_screen = hdpi
 
 		if self.hdpi_screen == False:
@@ -73,7 +72,7 @@ class Editor(Toplevel):
 		self.old_word = ''
 		self.new_word = ''
 		self.errlines = None
-		self.num_err = 0
+		self.err_count = 0
 		self.err_index = 0
 		self.state = 'normal'
 ##		self.pic = Image("photo", file="./icons/text-editor.png")
@@ -140,7 +139,7 @@ class Editor(Toplevel):
 		self.popup.add_command(label="##   comment", command=self.comment)
 		self.popup.add_command(label="   uncomment", command=self.uncomment)
 		self.popup.add_command(label="<<  unindent", command=self.unindent)
-		self.popup.add_command(label="    reimport", command=self.reload_file)
+		self.popup.add_command(label="         run", command=self.run)
 		self.popup.add_command(label="    nxterror", command=self.next_error)
 		self.popup.add_command(label="        undo", command=self.undo_override)
 		self.popup.add_command(label="        redo", command=self.redo_override)
@@ -168,6 +167,7 @@ class Editor(Toplevel):
 					self.flag_init = False
 			except Exception as e:
 				print(e)
+				self.entry.delete(0, END)
 				self.filename = None
 		
 		if self.filename == None:
@@ -178,31 +178,39 @@ class Editor(Toplevel):
 		pass
 		
 		
-	def handle_exception(self):
-	
-		exc_type, exc_value, exc_traceback = sys.exc_info()
-		self.errlines = list()
-		tb = traceback.format_exception(exc_type, exc_value, exc_traceback)
+	def run(self):
+		''' Run file currently being edited. This can not catch errlines of
+			those exceptions that are catched but not raised. Like if there is
+			this:
+			
+			try:
+				code that fails with SomeError
+			except SomeError:
+				some other code but no raising error
+		'''
 		
-		# Skip possible 'frozen' -messages 
-		if 'reload_file' in tb[1]:
-			i = 0
-			while True:
-				if self.filename in tb[i]: break
-				i += 1
-			tb[:] = tb[i:]
-					
-		for item in tb:
-			print(item)
-			if self.filename in item:
-				tmp = item[item.index('line') + 5:]
-				tmp = tmp[:tmp.index(',')]
-				self.errlines.append(tmp)
-		self.num_err = len(self.errlines)
+		res =  subprocess.run(['python', self.filename], text=True, capture_output=True)
+		print(res.stdout)
+		
+		self.err_count = 0
+		self.err_index = 0
+		
+		if res.returncode != 0:
+			self.errlines = list()
+			err = res.stderr.splitlines()
+			
+			for line in err:
+				print(line)
 				
-		#raise
-
-
+				if self.filename in line:
+					# parse linenums from errors
+					line = line[:line.rfind(',')]
+					line = line[line.rfind('line '):]
+					line = line[5:]
+					self.errlines.append(line)
+			
+			self.err_count = len(self.errlines)
+				
 
 	def next_error(self):
 		''' Show next error from last import.
@@ -215,53 +223,10 @@ class Editor(Toplevel):
 			self.contents.mark_set('insert', line)
 			self.err_index += 1
 		
-		if self.err_index == self.num_err:
+		if self.err_index == self.err_count:
 			self.err_index = 0
 	
 	
-	def reload_file(self):
-		""" Reimport current file. 
-		
-			Note: if there is something wrong in
-			to be imported file (exception raises), import will fail and 
-			there will not be reference to it in sys.modules
-			if importing for the first time.
-		
-			https://stackoverflow.com/questions/2052390/manually-raising-throwing-an-exception-in-python
-		"""
-		self.save()
-		self.errlines = None
-		self.num_err = 0
-		self.err_index = 0
-		
-		#get basename:
-		index = self.filename.rfind('/') + 1
-		module_name = self.filename[index:-3] #-3: remove trailing .py
-				
-		if module_name in sys.modules.keys():
-			
-			# Check for module-reference in sys.modules.
-			# True means the file currently open in editor 
-			# has already been imported at least once before. And therefore
-			# it can be reloaded.
-			
-			try:
-				self.current = sys.modules[module_name] 
-				importlib.reload(self.current)
-			except:
-				self.handle_exception()
-				
-		else:
-			# File has not been imported and so there
-			# is no reference to it in sys.modules and so it can not be
-			# reloaded. If so it must be imported. Also saving reference to it.
-			
-			try:
-				self.current = importlib.import_module(module_name)
-			except:
-				self.handle_exception()
-
-
 	def tabify(self, line):
 		
 		indent_stop_index = 0
@@ -360,7 +325,6 @@ class Editor(Toplevel):
 					self.entry.delete(0, END)
 					self.entry.insert(0, self.filename)
 					self.contents.edit_reset()
-					self.current = None
 					self.flag_init = False
 			except Exception:
 				self.filename = save #file tmp does not exist, reverting back to old file and open filedialog
