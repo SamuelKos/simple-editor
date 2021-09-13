@@ -8,8 +8,9 @@ It is meant to be used from Python console rather than standalone.
 * Comment - Uncomment
 * Search - Replace
 * Undo - Redo
-* AutoIndent
-* ReImport current file
+* Auto-indent
+* Run current file
+* Walk through errors
 
 # Installing and running
 debian-packages required: python3-tk
