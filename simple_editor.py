@@ -24,7 +24,7 @@ import subprocess
 # like Qt or completely other language like Tcl to name one. 
 ###############################################################################
 #
-#TODO:
+#TODO: add except:raise to errors
 
 # Below is short example from one book about how to use option database. I
 # am not using option database in this editor.
@@ -50,7 +50,7 @@ import subprocess
 
 class Editor(Toplevel):
 
-	def __init__(self, root, file=None, hdpi=True):
+	def __init__(self, root, inputfile=None, hdpi=True):
 		super().__init__(root, class_='Simple Editor')
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		self.titletext = 'Simple Editor'
@@ -152,7 +152,7 @@ class Editor(Toplevel):
 		self.btn_open.pack(side=LEFT)
 		self.btn_save=Button(self, font=self.menufont, text='Save', command=self.save)
 		self.btn_save.pack(side=LEFT)
-		self.local = file
+		self.local = inputfile
 
 		if self.local:
 			# Check if trying to open from curdir without full path
@@ -160,16 +160,19 @@ class Editor(Toplevel):
 				self.local = abspath('.') + '/' + self.local
 				
 			try:
-				with open(self.local) as file:
-					self.contents.insert(INSERT, file.read())
-					self.filename = self.local
-					self.entry.insert(0, self.filename)
-					self.flag_init = False
-			except Exception as e:
+				f = open(self.local)
+				
+			except OSError as e:
 				print(e)
 				self.entry.delete(0, END)
 				self.filename = None
-		
+			else:
+				self.contents.insert(INSERT, f.read())
+				f.close()
+				self.filename = self.local
+				self.entry.insert(0, self.filename)
+				self.flag_init = False
+					
 		if self.filename == None:
 			self.flag_init = True
 
@@ -213,7 +216,7 @@ class Editor(Toplevel):
 				
 
 	def next_error(self):
-		''' Show next error from last import.
+		''' Show next error from last run.
 		'''
 		
 		if self.errlines:
@@ -269,6 +272,7 @@ class Editor(Toplevel):
 		
 		# Check if user entered manually filepath (in entry)
 		# before pressing Open:
+		
 		if self.flag_init and tmp != '' and tmp != None:
 			
 			# If trying to open from curdir without full path
@@ -278,16 +282,21 @@ class Editor(Toplevel):
 			self.filename = tmp
 			
 			try:
-				with open(self.filename) as file:
-					self.contents.delete('1.0', END)
-					self.entry.delete(0, END)
-					self.contents.insert(INSERT, file.read())
-					self.entry.insert(0, self.filename)
-					self.flag_init = False
-			except Exception as e:
+				f = open(self.filename)
+				
+			except OSError as e:
 				print(e)
 				self.filename = None
+			else:
+				self.contents.delete('1.0', END)
+				self.entry.delete(0, END)
+				self.contents.insert(INSERT, f.read())
+				f.close()
+				self.entry.insert(0, self.filename)
+				self.flag_init = False
+		
 			################################### End of Check
+			
 		else:
 
 			if self.filename in (tmp, None) or no_such_file:
@@ -318,35 +327,44 @@ class Editor(Toplevel):
 				self.filename = tmp
 	
 			try:
-				with open(self.filename, encoding='utf-8') as file:
-					self.contents.delete('1.0', END)
-					for line in file.readlines():
-						self.contents.insert(INSERT, line)
-					self.entry.delete(0, END)
-					self.entry.insert(0, self.filename)
-					self.contents.edit_reset()
-					self.flag_init = False
-			except Exception:
-				self.filename = save #file tmp does not exist, reverting back to old file and open filedialog
+				f = open(self.filename, encoding='utf-8')
+				
+			except OSError as e:
+				print(e)
+				#file tmp does not exist, reverting back to old file and open filedialog
+				self.filename = save
+
 				if not no_such_file and not asked:
 					self.load(no_such_file=True)
-		
+			else:
+				self.contents.delete('1.0', END)
+
+				for line in f.readlines():
+					self.contents.insert(INSERT, line)
+
+				f.close()
+				self.entry.delete(0, END)
+				self.entry.insert(0, self.filename)
+				self.contents.edit_reset()
+				self.flag_init = False
+				
 	
 	def save(self):
+		''' No error catching because user wants to know if file was not
+			saved. As error-message in console.
+		'''
 		tmp = self.contents.get('1.0', END).splitlines(True)
-		# Check indent:
+				
+		# Check indent (tabify):
 		tmp[:] = [self.tabify(line) for line in tmp]
-			
-		try:
-			tmp = ''.join(tmp)[:-1]
-			# explanation of: [:-1]
-			# otherwise there will be extra newline at the end of file
-			# so we remove the last symbol which is newline
-			
-			with open(self.entry.get(), 'w', encoding='utf-8') as file:
-				file.write(tmp)
-		except Exception as e:
-			print(e)
+
+		tmp = ''.join(tmp)[:-1]
+		# explanation of: [:-1]
+		# otherwise there will be extra newline at the end of file
+		# so we remove the last symbol which is newline
+		f = open(self.entry.get(), 'w', encoding='utf-8')		
+		f.write(tmp)
+		f.close()
 
 
 	def raise_popup(self, event, *args):
