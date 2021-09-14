@@ -24,7 +24,7 @@ import subprocess
 # like Qt or completely other language like Tcl to name one. 
 ###############################################################################
 #
-#TODO: add except:raise to errors
+#TODO:
 
 # Below is short example from one book about how to use option database. I
 # am not using option database in this editor.
@@ -119,8 +119,10 @@ class Editor(Toplevel):
 		
 		if hdpi == True: 
 			self.contents.vbar.config(width=30)
+			self.contents.vbar.config(elementborderwidth=4)
 		else:
 			self.contents.vbar.config(width=20)
+			self.contents.vbar.config(elementborderwidth=3)
 			
 		self.contents.bind("<Return>", self.return_override)
 		self.contents.bind("<Control-C>", self.comment)
@@ -133,16 +135,13 @@ class Editor(Toplevel):
 		self.popup_whohasfocus = None
 		self.popup = Menu(self, font=self.menufont, tearoff=0, bd=0, activeborderwidth=0)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
-		self.popup.add_command(label="        copy", command=self.copy)
-		self.popup.add_command(label="       paste", command=self.paste)
+
+		self.popup.add_command(label="   nexterror", command=self.next_error)
 		self.popup.add_command(label=">>    indent", command=self.indent)
 		self.popup.add_command(label="##   comment", command=self.comment)
 		self.popup.add_command(label="   uncomment", command=self.uncomment)
 		self.popup.add_command(label="<<  unindent", command=self.unindent)
 		self.popup.add_command(label="         run", command=self.run)
-		self.popup.add_command(label="    nxterror", command=self.next_error)
-		self.popup.add_command(label="        undo", command=self.undo_override)
-		self.popup.add_command(label="        redo", command=self.redo_override)
 		self.popup.add_command(label="        help", command=self.help)
 		
 		self.entry = Entry(self, font=self.menufont)
@@ -175,7 +174,8 @@ class Editor(Toplevel):
 					
 		if self.filename == None:
 			self.flag_init = True
-
+		############################# init End ######################
+		
 
 	def do_nothing(self, event=None):
 		pass
@@ -183,13 +183,21 @@ class Editor(Toplevel):
 		
 	def run(self):
 		''' Run file currently being edited. This can not catch errlines of
-			those exceptions that are catched but not raised. Like if there is
-			this:
+			those exceptions that are catched. Like:
 			
 			try:
-				code that fails with SomeError
+				code we know sometimes failing with SomeError
+				(but might also fail with other error-type)
 			except SomeError:
 				some other code but no raising error
+				
+			Note: 	Above code will raise an error in case
+			 		code in try-block raises some other error than SomeError.
+					In that case those errlines will be of course catched.
+			
+			What this means: If you self.run() with intention to spot possible 
+			errors in your program, you should use logging (in except-block)
+			if you are not 100% sure about your code in except-block.
 		'''
 		
 		res =  subprocess.run(['python', self.filename], text=True, capture_output=True)
@@ -219,7 +227,7 @@ class Editor(Toplevel):
 		''' Show next error from last run.
 		'''
 		
-		if self.errlines:
+		if self.err_count > 0:
 			self.contents.focus_set()
 			line = str(self.errlines[self.err_index]) + '.0'
 			self.contents.see(line)

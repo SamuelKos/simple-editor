@@ -11,6 +11,7 @@ It is meant to be used from Python console rather than standalone.
 * Auto-indent
 * Run current file
 * Walk through errors
+* Goto line
 
 # Installing and running
 debian-packages required: python3-tk
