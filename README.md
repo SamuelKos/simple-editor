@@ -28,19 +28,19 @@ debian-packages required: python3-tk
 foo@bar:~$ sudo apt install python3-tk
 ```
 
-Download simple_editor.py and run with:
+Download spyde.py and run with:
 
 ```console
-foo@bar:~$ python3 simple_editor.py
+foo@bar:~$ python3 spyde.py
 ```
 
 Running from Python console:
 
 ```console
->>> import simple_editor
+>>> import spyde
 >>> from tkinter import Tk
 >>> root=Tk().withdraw()
->>> e=simple_editor.Editor(root)
+>>> e=spyde.Editor(root)
 ```
 
 # Licence
