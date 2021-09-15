@@ -1,17 +1,25 @@
-# simple-editor
-Simple Editor with GUI for Python.
+# Simple PYthon Development Editor
+GUI-editor for Python.
 Tested to work with Debian Buster and Bullseye.
 It is meant to be used from Python console rather than standalone.
 
-# Features
+# Featuring
 * Indent - Unindent
 * Comment - Uncomment
 * Search - Replace
-* Undo - Redo
 * Auto-indent
 * Run current file
-* Walk through errors
-* Goto line
+* Click to open errors
+* etc
+
+# Lacking and not going to implement
+* Autocompletion
+* Hinting
+* Linenumbering
+* Syntax highlighting
+
+# Maybe TODO
+* Multicursor edit or something similar
 
 # Installing and running
 debian-packages required: python3-tk

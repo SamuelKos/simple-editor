@@ -1,5 +1,5 @@
 from tkinter import (
-TclError, Menu, Toplevel, Image, font, Tk, Button, Entry,
+TclError, Menu, Toplevel, Image, Tk, Button, Entry,
 BOTTOM, BOTH, LEFT, X, END, INSERT, SEL_FIRST, SEL_LAST
 )
 from tkinter.scrolledtext import ScrolledText
@@ -26,6 +26,7 @@ import subprocess
 #
 #TODO:
 
+ 
 # Below is short example from one book about how to use option database. I
 # am not using option database in this editor.
 
@@ -66,18 +67,20 @@ class Editor(Toplevel):
 			self.menufont = Font(family='Noto Mono', size=20)
 		
 		self.tab_width = self.font.measure(4*' ')
+		
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
 		self.search_pos = 0
 		self.old_word = ''
 		self.new_word = ''
-		self.errlines = None
-		self.err_count = 0
-		self.err_index = 0
+		self.errlines = list()
+		
 		self.state = 'normal'
 ##		self.pic = Image("photo", file="./icons/text-editor.png")
 ##		self.tk.call('wm','iconphoto', self._w, self.pic)
+		
 		self.bind("<Escape>", lambda e: self.iconify())
+		
 		self.HELPTXT = '''Keyboard shortcuts:
 		
 		Ctrl-f search
@@ -135,12 +138,13 @@ class Editor(Toplevel):
 		self.popup_whohasfocus = None
 		self.popup = Menu(self, font=self.menufont, tearoff=0, bd=0, activeborderwidth=0)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
-
-		self.popup.add_command(label="   nexterror", command=self.next_error)
+		self.popup.add_command(label="        copy", command=self.copy)
+		self.popup.add_command(label="       paste", command=self.paste)
+		self.popup.add_command(label="<<  unindent", command=self.unindent)
 		self.popup.add_command(label=">>    indent", command=self.indent)
 		self.popup.add_command(label="##   comment", command=self.comment)
 		self.popup.add_command(label="   uncomment", command=self.uncomment)
-		self.popup.add_command(label="<<  unindent", command=self.unindent)
+		self.popup.add_command(label="      errors", command=self.show_errors)
 		self.popup.add_command(label="         run", command=self.run)
 		self.popup.add_command(label="        help", command=self.help)
 		
@@ -180,7 +184,61 @@ class Editor(Toplevel):
 	def do_nothing(self, event=None):
 		pass
 		
+	
+	def enter(self, tagname, event=None):
+		''' Used in error-page, when mousecursor enters hyperlink tagname.
+		'''
+		self.contents.config(cursor="hand2")
+		self.contents.tag_config(tagname, underline=1)
+
+
+	def leave(self, tagname, event=None):
+		''' Used in error-page, when mousecursor leaves hyperlink tagname.
+		'''	
+		self.contents.config(cursor="")
+		self.contents.tag_config(tagname, underline=0)
+
+
+	def lclick(self, tagname, event=None):
+		''' Used in error-page, when hyperlink tagname is clicked.
+			
+			self.taglinks is dict with tagname as key 
+			and function (self.taglink) as value. 
+		'''
 		
+		# passing tagname-string as argument to function self.taglink()
+		# which in turn is a value of tagname-key in dictionary taglinks: 
+		self.taglinks[tagname](tagname) 
+		
+
+	def tag_link(self, tagname, event=None):
+		''' Used in error-page, executed when hyperlink tagname is clicked.
+		'''		
+		i = int(tagname.split("-")[1])
+		filepath, errline = self.errlines[i]
+		
+		try:
+			f = open(filepath, encoding='utf-8')
+		except OSError as e:
+			print(e)
+		else:
+			self.contents.delete('1.0', END)
+
+			for line in f.readlines():
+				self.contents.insert(INSERT, line)
+
+			f.close()
+			
+			self.filename = filepath
+			self.entry.delete(0, END)
+			self.entry.insert(0, filepath)
+			self.contents.edit_reset()
+			self.contents.focus_set()
+			line = errline + '.0'
+			self.contents.see(line)
+			self.contents.mark_set('insert', line)
+			
+			
 	def run(self):
 		''' Run file currently being edited. This can not catch errlines of
 			those exceptions that are catched. Like:
@@ -203,41 +261,74 @@ class Editor(Toplevel):
 		res =  subprocess.run(['python', self.filename], text=True, capture_output=True)
 		print(res.stdout)
 		
-		self.err_count = 0
-		self.err_index = 0
-		
 		if res.returncode != 0:
+			self.taglinks = dict()
 			self.errlines = list()
-			err = res.stderr.splitlines()
 			
-			for line in err:
-				print(line)
+			self.contents.delete('1.0', END)
+			
+			for tag in self.contents.tag_names():
+				if 'hyper' in tag:
+					self.contents.tag_delete(tag)
 				
-				if self.filename in line:
-					# parse linenums from errors
-					line = line[:line.rfind(',')]
-					line = line[line.rfind('line '):]
-					line = line[5:]
-					self.errlines.append(line)
+			self.err = res.stderr.splitlines()
 			
-			self.err_count = len(self.errlines)
+			for line in self.err:
+				print(line)
+				tmp = line
+
+				tagname = "hyper-%s" % len(self.errlines)
+				self.contents.tag_config(tagname)
+				
+				# Why ButtonRelease instead of just Button-1:
+				# https://stackoverflow.com/questions/24113946/unable-to-move-text-insert-index-with-mark-set-widget-function-python-tkint
+				
+				self.contents.tag_bind(tagname, "<ButtonRelease-1>", 
+					lambda event, arg=tagname: self.lclick(arg, event))
+				
+				self.contents.tag_bind(tagname, "<Enter>", 
+					lambda event, arg=tagname: self.enter(arg, event))
+				
+				self.contents.tag_bind(tagname, "<Leave>", 
+					lambda event, arg=tagname: self.leave(arg, event))
+				
+				self.taglinks[tagname] = self.tag_link
+				
+				# parse filepath and linenums from errors
+				if 'File' and ',' in line:
+					data = line.split(',')[:2]
+					linenum = data[1][6:]
+					filepath = data[0][8:-1]
+					self.errlines.append((filepath, linenum)) 
+					self.contents.insert(INSERT, tmp +"\n", tagname)
+				else:
+					self.contents.insert(INSERT, tmp +"\n")
 				
 
-	def next_error(self):
-		''' Show next error from last run.
+	def show_errors(self):
+		''' Show modified traceback from last run.
 		'''
-		
-		if self.err_count > 0:
-			self.contents.focus_set()
-			line = str(self.errlines[self.err_index]) + '.0'
-			self.contents.see(line)
-			self.contents.mark_set('insert', line)
-			self.err_index += 1
-		
-		if self.err_index == self.err_count:
-			self.err_index = 0
+
+		if len(self.errlines) != 0:
+			self.contents.delete('1.0', END)
+			
+			i = 0
+			for line in self.err:
+				tmp = line
+				
+				# parse filepath and linenums from errors
+				if 'File' and ',' in line:
+					data = line.split(',')[:2]
+					linenum = data[1][6:]
+					filepath = data[0][8:-1]
+					self.errlines.append((filepath, linenum)) 
+					self.contents.insert(INSERT, tmp +"\n", 'hyper-%d' % i)
+					i += 1
+				else:
+					self.contents.insert(INSERT, tmp +"\n")
+
 	
-	
+			
 	def tabify(self, line):
 		
 		indent_stop_index = 0
@@ -370,9 +461,11 @@ class Editor(Toplevel):
 		# explanation of: [:-1]
 		# otherwise there will be extra newline at the end of file
 		# so we remove the last symbol which is newline
-		f = open(self.entry.get(), 'w', encoding='utf-8')		
+		fpath_in_entry = self.entry.get()
+		f = open(fpath_in_entry, 'w', encoding='utf-8')		
 		f.write(tmp)
 		f.close()
+		self.filename = fpath_in_entry
 
 
 	def raise_popup(self, event, *args):
