@@ -106,10 +106,9 @@ class Editor(Toplevel):
 		
 		'''
 		
-		#Layout Begin:
-		#####################################################
-		self.data = [1,2] # part of next lambda-example, not used.
-		self.bind("<Button-3>", lambda event, arg=self.data: self.raise_popup(event, arg))
+		# Layout Begin:
+		####################################################
+		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.bind("<Control-f>", lambda event: self.search(event))
 		self.bind("<Control-r>", lambda event: self.replace(event))
 		self.bind("<Control-R>", lambda event: self.replace_all(event))
@@ -120,7 +119,7 @@ class Editor(Toplevel):
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
 		
-		if hdpi == True: 
+		if hdpi == True:
 			self.contents.vbar.config(width=30)
 			self.contents.vbar.config(elementborderwidth=4)
 		else:
@@ -194,26 +193,26 @@ class Editor(Toplevel):
 
 	def leave(self, tagname, event=None):
 		''' Used in error-page, when mousecursor leaves hyperlink tagname.
-		'''	
+		'''
 		self.contents.config(cursor="")
 		self.contents.tag_config(tagname, underline=0)
 
 
 	def lclick(self, tagname, event=None):
 		''' Used in error-page, when hyperlink tagname is clicked.
-			
-			self.taglinks is dict with tagname as key 
-			and function (self.taglink) as value. 
+		
+			self.taglinks is dict with tagname as key
+			and function (self.taglink) as value.
 		'''
 		
 		# passing tagname-string as argument to function self.taglink()
 		# which in turn is a value of tagname-key in dictionary taglinks: 
-		self.taglinks[tagname](tagname) 
+		self.taglinks[tagname](tagname)
 		
 
 	def tag_link(self, tagname, event=None):
 		''' Used in error-page, executed when hyperlink tagname is clicked.
-		'''		
+		'''
 		i = int(tagname.split("-")[1])
 		filepath, errline = self.errlines[i]
 		
