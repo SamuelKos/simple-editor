@@ -1,6 +1,6 @@
 from tkinter import (
 TclError, Menu, Toplevel, Image, Tk, Button, Entry,
-BOTTOM, BOTH, LEFT, X, END, INSERT, SEL_FIRST, SEL_LAST
+BOTTOM, BOTH, LEFT, X, END, INSERT, SEL_FIRST, SEL_LAST, CURRENT
 )
 from tkinter.scrolledtext import ScrolledText
 from tkinter.filedialog import FileDialog
@@ -515,7 +515,7 @@ class Editor(Toplevel):
 		self.btn_save.config(state='normal')
 		self.load()
 		self.bind("<Escape>", lambda e: self.iconify())
-		self.bind("<Button-3>", lambda event, arg=self.data: self.raise_popup(event, arg))
+		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.contents.focus_set()
 	
 	
@@ -752,7 +752,7 @@ class Editor(Toplevel):
 		self.contents.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
-		self.bind("<Button-3>", lambda event, arg=self.data: self.raise_popup(event, arg))
+		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.contents.tag_remove('match', '1.0', END)
 		self.contents.tag_remove('found', '1.0', END)
 		self.entry.bind("<Return>", self.load)
