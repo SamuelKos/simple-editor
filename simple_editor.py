@@ -76,8 +76,8 @@ class Editor(Toplevel):
 		self.errlines = list()
 		
 		self.state = 'normal'
-##		self.pic = Image("photo", file="./icons/text-editor.png")
-##		self.tk.call('wm','iconphoto', self._w, self.pic)
+		self.pic = Image("photo", file="./editor.png")
+		self.tk.call('wm','iconphoto', self._w, self.pic)
 		
 		self.bind("<Escape>", lambda e: self.iconify())
 		
