@@ -1,6 +1,6 @@
 # simple-editor
-GUI-editor for Python development
-Tested to work with Debian Buster and Bullseye.
+GUI-editor for Python development. 
+Tested to work with Debian Buster and Bullseye. 
 It is meant to be used from Python console rather than standalone.
 
 # Featuring
@@ -10,6 +10,7 @@ It is meant to be used from Python console rather than standalone.
 * Auto-indent
 * Run current file
 * Click to open errors
+* Font Chooser
 
 
 # Lacking and not going to implement
