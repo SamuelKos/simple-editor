@@ -1,23 +1,20 @@
-from tkinter import (
-TclError, Menu, Toplevel, Image, Tk, Button, Entry,
-BOTTOM, BOTH, LEFT, X, END, INSERT, SEL_FIRST, SEL_LAST,
-Frame, Text, Listbox, Spinbox, SINGLE
-)
+#TODO: 	if replace(pattern, string) and pattern in string:
+#			issue: replace() matches already replaced parts of contents
+#			while it should ignore them. In short: replace is rematching.
 
-from tkinter.scrolledtext import ScrolledText
-from tkinter.filedialog import FileDialog
-from tkinter.font import Font
+# from standard library
+import tkinter.scrolledtext
+import tkinter.filedialog
+import tkinter.font
 import tkinter
+import os
 
+# from current directory 
 import font_chooser
-
-from os.path import abspath
-
 
 # for executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
-
 
 ###############################################################################
 # config(**options) Modifies one or more widget options. If no options are
@@ -26,18 +23,14 @@ import subprocess
 # https://www.tcl.tk/man/tcl8.6/TkCmd/event.htm
 # https://docs.python.org/3/library/tkinter.html
 #
-# If you are about to use tkinter Python-module in a program with complexity
-# similar or larger than in this editor, consider using some other GUI-library
-# like Qt or completely other language like Tcl to name one. 
+# If you are about to use tkinter Python-module, consider
+# using some other GUI-library like Qt, GTK
+# or completely other language like Tcl to name one.
 ###############################################################################
 #
-#TODO: check replace sometimes failing with multiple matches in one line
-
-
-# Below is short example from one book about how to use option database. I
-# am not using option database in this editor.
-
-##	A typical option database text file may look like the following:
+# Below is short example from one book about how to use option database.
+# I am not using option database in this editor.
+# A typical option database text file may look like the following:
 
 ##	*font: Arial 10
 ##	*Label*font: Times 12 bold
@@ -56,7 +49,7 @@ import subprocess
 ##
 
 			
-class Editor(Toplevel):
+class Editor(tkinter.Toplevel):
 
 	def __init__(self, root, inputfile=None, hdpi=False):
 		super().__init__(root, class_='Simple Editor')
@@ -73,22 +66,24 @@ class Editor(Toplevel):
 					'Liberation Mono',
 					'Inconsolata'
 					]
+					
+		fontfamilies = tkinter.font.families()
 
 		for fontname in self.goodfonts:
-			if fontname in tkinter.font.families():
+			if fontname in fontfamilies:
 				self.fontname = fontname
 				break
 		
 		if not self.fontname:
-			self.fontname = tkinter.font.families()[0]
+			self.fontname = fontfamilies[0]
 			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
 
 		if self.hdpi_screen == False:
-			self.font = Font(family=self.fontname, size=12)
-			self.menufont = Font(family=self.fontname, size=10)
+			self.font = tkinter.font.Font(family=self.fontname, size=12)
+			self.menufont = tkinter.font.Font(family=self.fontname, size=10)
 		else:
-			self.font = Font(family=self.fontname, size=24)
-			self.menufont = Font(family=self.fontname, size=20)
+			self.font = tkinter.font.Font(family=self.fontname, size=24)
+			self.menufont = tkinter.font.Font(family=self.fontname, size=20)
 		
 		self.tab_width = self.font.measure(4*' ')
 		
@@ -100,7 +95,7 @@ class Editor(Toplevel):
 		self.errlines = list()
 		
 		self.state = 'normal'
-		self.pic = Image("photo", file="./icons/editor.png")
+		self.pic = tkinter.Image("photo", file="./icons/editor.png")
 		self.tk.call('wm','iconphoto', self._w, self.pic)
 		
 		self.bind("<Escape>", lambda e: self.iconify())
@@ -138,7 +133,7 @@ class Editor(Toplevel):
 		self.bind("<Control-R>", self.replace_all)
 		self.bind("<Control-g>", self.gotoline)
 		
-		self.contents = ScrolledText(self, background='#000000', foreground='#D3D7CF', insertbackground='#D3D7CF', font=self.font, blockcursor=True, tabs=(self.tab_width, ), tabstyle='wordprocessor', undo=True, maxundo=10, autoseparators=True)
+		self.contents = tkinter.scrolledtext.ScrolledText(self, background='#000000', foreground='#D3D7CF', insertbackground='#D3D7CF', font=self.font, blockcursor=True, tabs=(self.tab_width, ), tabstyle='wordprocessor', undo=True, maxundo=10, autoseparators=True)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
@@ -157,10 +152,10 @@ class Editor(Toplevel):
 		self.contents.bind("<Control-less>", self.unindent)
 		self.contents.bind("<Control-a>", self.select_all)
 		self.contents.bind("<Control-p>", self.font_choose)
-		self.contents.pack(side=BOTTOM, expand=True, fill=BOTH)
+		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
 		
 		self.popup_whohasfocus = None
-		self.popup = Menu(self, font=self.menufont, tearoff=0, bd=0, activeborderwidth=0)
+		self.popup = tkinter.Menu(self, font=self.menufont, tearoff=0, bd=0, activeborderwidth=0)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
 		self.popup.add_command(label="        copy", command=self.copy)
 		self.popup.add_command(label="       paste", command=self.paste)
@@ -172,29 +167,29 @@ class Editor(Toplevel):
 		self.popup.add_command(label="         run", command=self.run)
 		self.popup.add_command(label="        help", command=self.help)
 		
-		self.entry = Entry(self, font=self.menufont)
+		self.entry = tkinter.Entry(self, font=self.menufont)
 		self.entry_return_bind_id = self.entry.bind("<Return>", self.load)
-		self.entry.pack(side=LEFT, expand=True, fill=X)
-		self.btn_open=Button(self, font=self.menufont, text='Open', command=self.load)
-		self.btn_open.pack(side=LEFT)
-		self.btn_save=Button(self, font=self.menufont, text='Save', command=self.save)
-		self.btn_save.pack(side=LEFT)
+		self.entry.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X)
+		self.btn_open=tkinter.Button(self, font=self.menufont, text='Open', command=self.load)
+		self.btn_open.pack(side=tkinter.LEFT)
+		self.btn_save=tkinter.Button(self, font=self.menufont, text='Save', command=self.save)
+		self.btn_save.pack(side=tkinter.LEFT)
 		self.local = inputfile
 
 		if self.local:
 			# Check if trying to open from curdir without full path
 			if '/' not in self.local:
-				self.local = abspath('.') + '/' + self.local
+				self.local = os.path.abspath('.') + '/' + self.local
 				
 			try:
 				f = open(self.local)
 				
 			except OSError as e:
 				print(e)
-				self.entry.delete(0, END)
+				self.entry.delete(0, tkinter.END)
 				self.filename = None
 			else:
-				self.contents.insert(INSERT, f.read())
+				self.contents.insert(tkinter.INSERT, f.read())
 				f.close()
 				self.filename = self.local
 				self.entry.insert(0, self.filename)
@@ -251,15 +246,15 @@ class Editor(Toplevel):
 		except OSError as e:
 			print(e)
 		else:
-			self.contents.delete('1.0', END)
+			self.contents.delete('1.0', tkinter.END)
 
 			for line in f.readlines():
-				self.contents.insert(INSERT, line)
+				self.contents.insert(tkinter.INSERT, line)
 
 			f.close()
 			
 			self.filename = filepath
-			self.entry.delete(0, END)
+			self.entry.delete(0, tkinter.END)
 			self.entry.insert(0, filepath)
 			self.contents.edit_reset()
 			self.contents.focus_set()
@@ -294,7 +289,7 @@ class Editor(Toplevel):
 			self.taglinks = dict()
 			self.errlines = list()
 			
-			self.contents.delete('1.0', END)
+			self.contents.delete('1.0', tkinter.END)
 			
 			for tag in self.contents.tag_names():
 				if 'hyper' in tag:
@@ -329,9 +324,9 @@ class Editor(Toplevel):
 					linenum = data[1][6:]
 					filepath = data[0][8:-1]
 					self.errlines.append((filepath, linenum)) 
-					self.contents.insert(INSERT, tmp +"\n", tagname)
+					self.contents.insert(tkinter.INSERT, tmp +"\n", tagname)
 				else:
-					self.contents.insert(INSERT, tmp +"\n")
+					self.contents.insert(tkinter.INSERT, tmp +"\n")
 				
 
 	def show_errors(self):
@@ -339,7 +334,7 @@ class Editor(Toplevel):
 		'''
 
 		if len(self.errlines) != 0:
-			self.contents.delete('1.0', END)
+			self.contents.delete('1.0', tkinter.END)
 			
 			i = 0
 			for line in self.err:
@@ -351,10 +346,10 @@ class Editor(Toplevel):
 					linenum = data[1][6:]
 					filepath = data[0][8:-1]
 					self.errlines.append((filepath, linenum)) 
-					self.contents.insert(INSERT, tmp +"\n", 'hyper-%d' % i)
+					self.contents.insert(tkinter.INSERT, tmp +"\n", 'hyper-%d' % i)
 					i += 1
 				else:
-					self.contents.insert(INSERT, tmp +"\n")
+					self.contents.insert(tkinter.INSERT, tmp +"\n")
 
 	
 			
@@ -405,7 +400,7 @@ class Editor(Toplevel):
 			
 			# If trying to open from curdir without full path
 			if '/' not in tmp:
-				tmp = abspath('.') + '/' + tmp
+				tmp = os.path.abspath('.') + '/' + tmp
 				
 			self.filename = tmp
 			
@@ -416,9 +411,9 @@ class Editor(Toplevel):
 				print(e)
 				self.filename = None
 			else:
-				self.contents.delete('1.0', END)
-				self.entry.delete(0, END)
-				self.contents.insert(INSERT, f.read())
+				self.contents.delete('1.0', tkinter.END)
+				self.entry.delete(0, tkinter.END)
+				self.contents.insert(tkinter.INSERT, f.read())
 				f.close()
 				self.entry.insert(0, self.filename)
 				self.flag_init = False
@@ -428,7 +423,7 @@ class Editor(Toplevel):
 		else:
 
 			if self.filename in (tmp, None) or no_such_file:
-				d = FileDialog(self)
+				d = tkinter.filedialog.FileDialog(self)
 				
 				d.dirs.configure(font=self.font)
 				d.files.configure(font=self.font)
@@ -450,7 +445,7 @@ class Editor(Toplevel):
 			else:
 				# If trying to open from curdir without full path
 				if '/' not in tmp:
-					tmp = abspath('.') + '/' + tmp
+					tmp = os.path.abspath('.') + '/' + tmp
 					
 				self.filename = tmp
 	
@@ -465,13 +460,13 @@ class Editor(Toplevel):
 				if not no_such_file and not asked:
 					self.load(no_such_file=True)
 			else:
-				self.contents.delete('1.0', END)
+				self.contents.delete('1.0', tkinter.END)
 
 				for line in f.readlines():
-					self.contents.insert(INSERT, line)
+					self.contents.insert(tkinter.INSERT, line)
 
 				f.close()
-				self.entry.delete(0, END)
+				self.entry.delete(0, tkinter.END)
 				self.entry.insert(0, self.filename)
 				self.contents.edit_reset()
 				self.flag_init = False
@@ -481,7 +476,7 @@ class Editor(Toplevel):
 		''' No error catching because user wants to know if file was not
 			saved. As error-message in console.
 		'''
-		tmp = self.contents.get('1.0', END).splitlines(True)
+		tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
 				
 		# Check indent (tabify):
 		tmp[:] = [self.tabify(line) for line in tmp]
@@ -514,26 +509,26 @@ class Editor(Toplevel):
 			self.contents.see(line)
 			self.contents.mark_set('insert', line)
 			self.stop_gotoline()
-		except TclError as e:
+		except tkinter.TclError as e:
 			print(e)
 	
 	
 	def stop_gotoline(self, event=None):
 		self.entry.bind("<Return>", self.load)
 		self.bind("<Escape>", lambda e: self.iconify())
-		self.entry.delete(0,END)
+		self.entry.delete(0,tkinter.END)
 		self.entry.insert(0,self.filename)
 		self.title(self.titletext)
 		
 	
 	def gotoline(self, event=None):
 		counter = 0
-		for line in self.contents.get('1.0', END).splitlines():
+		for line in self.contents.get('1.0', tkinter.END).splitlines():
 			counter += 1
 		self.entry.bind("<Return>", self.do_gotoline)
 		self.bind("<Escape>", self.stop_gotoline)
 		self.title('Go to line, 1-%s:' % str(counter))
-		self.entry.delete(0, END)
+		self.entry.delete(0, tkinter.END)
 		self.entry.focus_set()
 		return "break"
 	
@@ -551,8 +546,8 @@ class Editor(Toplevel):
 	
 	def help(self, event=None):
 		self.save()
-		self.contents.delete('1.0', END)
-		self.contents.insert(INSERT, self.HELPTXT)
+		self.contents.delete('1.0', tkinter.END)
+		self.contents.insert(tkinter.INSERT, self.HELPTXT)
 		self.contents.config(state='disabled')
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
@@ -563,34 +558,34 @@ class Editor(Toplevel):
 	def undo_override(self, event=None):
 		try:
 			self.contents.edit_undo()
-		except TclError as e:
+		except tkinter.TclError as e:
 			print(e)
 		
 		
 	def redo_override(self, event=None):
 		try:
 			self.contents.edit_redo()
-		except TclError as e:
+		except tkinter.TclError as e:
 			print(e)
 	
 	
 	def indent(self, event=None):
 		try:
-			startline = int(self.contents.index(SEL_FIRST).split(sep='.')[0])
-			endline = int(self.contents.index(SEL_LAST).split(sep='.')[0])
+			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 			for linenum in range(startline, endline+1):
-				self.contents.mark_set(INSERT, '%s.0' % linenum)
-				self.contents.insert(INSERT, '\t')
+				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
+				self.contents.insert(tkinter.INSERT, '\t')
 			self.contents.edit_separator()
-		except TclError as e:
+		except tkinter.TclError as e:
 			print(e)
 		return "break"
 		
 
 	def unindent(self, event=None):
 		try:
-			startline = int(self.contents.index(SEL_FIRST).split(sep='.')[0])
-			endline = int(self.contents.index(SEL_LAST).split(sep='.')[0])
+			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 			# Check there is enough space in every line:
 			flag_continue = True
 			
@@ -606,24 +601,24 @@ class Editor(Toplevel):
 					tmp = self.contents.get('%s.0' % linenum, '%s.0 lineend' % linenum)
 				
 					if len(tmp) != 0:
-						self.contents.mark_set(INSERT, '%s.0' % linenum)
-						self.contents.delete(INSERT, '%s+%dc' % (INSERT, 1))
+						self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
+						self.contents.delete(tkinter.INSERT, '%s+%dc' % (tkinter.INSERT, 1))
 				self.contents.edit_separator()
 		
-		except TclError as e:
+		except tkinter.TclError as e:
 			print(e)
 		return "break"
 
 	
 	def comment(self, event=None):
 		try:
-			startline = int(self.contents.index(SEL_FIRST).split(sep='.')[0])
-			endline = int(self.contents.index(SEL_LAST).split(sep='.')[0])
+			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 			for linenum in range(startline, endline+1):
-				self.contents.mark_set(INSERT, '%s.0' % linenum)
-				self.contents.insert(INSERT, '##')
+				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
+				self.contents.insert(tkinter.INSERT, '##')
 			self.contents.edit_separator()
-		except TclError as e:
+		except tkinter.TclError as e:
 			print(e)
 		return "break"
 
@@ -631,37 +626,37 @@ class Editor(Toplevel):
 	def uncomment(self, event=None):
 		'''should work even if there are uncommented lines between commented lines'''
 		try:
-			startline = int(self.contents.index(SEL_FIRST).split(sep='.')[0])
-			endline = int(self.contents.index(SEL_LAST).split(sep='.')[0])
+			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
+			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
 			changed = False
 			
 			for linenum in range(startline, endline+1):
-				self.contents.mark_set(INSERT, '%s.0' % linenum)
+				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				tmp = self.contents.get('%s.0' % linenum,'%s.0 lineend' % linenum)
 				
 				if tmp.lstrip()[:2] == '##':
 					tmp = tmp.replace('##', '', 1)
 					self.contents.delete('%s.0' % linenum,'%s.0 lineend' % linenum)
-					self.contents.insert(INSERT, tmp)
+					self.contents.insert(tkinter.INSERT, tmp)
 					changed = True
 					
 			if changed: self.contents.edit_separator()
 			
-		except TclError as e:
+		except tkinter.TclError as e:
 			print(e)
 		return "break"
 		
 
 	def select_all(self, event):
-		self.contents.tag_remove('sel', '1.0', END)
-		self.contents.tag_add('sel', 1.0, END)
+		self.contents.tag_remove('sel', '1.0', tkinter.END)
+		self.contents.tag_add('sel', 1.0, tkinter.END)
 		return "break"
 
 
 	def return_override(self, event):
 		# Cursor indexes when pressed return:
-		line = int(self.contents.index(INSERT).split('.')[0])
-		row = int(self.contents.index(INSERT).split('.')[1])
+		line = int(self.contents.index(tkinter.INSERT).split('.')[0])
+		row = int(self.contents.index(tkinter.INSERT).split('.')[1])
 		
 		# Empty line check:
 		# If line is empty but has tabs etc. And cursor is in the middle
@@ -677,7 +672,7 @@ class Editor(Toplevel):
 		# First one special case: check if cursor is inside indentation,
 		# and line is not empty.
 		if tmp[:row].isspace() and not tmp[row:].isspace():
-			self.contents.insert(INSERT, '\n')
+			self.contents.insert(tkinter.INSERT, '\n')
 			self.contents.insert('%s.0' % str(int(line)+1), tmp[:row])
 			self.contents.edit_separator()
 			return "break"
@@ -700,8 +695,8 @@ class Editor(Toplevel):
 				if tmp[i] != '\t':
 					break
 	
-			self.contents.insert(INSERT, '\n') # Manual newline because return is overrided.
-			self.contents.insert(INSERT, i*'\t')
+			self.contents.insert(tkinter.INSERT, '\n') # Manual newline because return is overrided.
+			self.contents.insert(tkinter.INSERT, i*'\t')
 			self.contents.edit_separator()
 			return "break"
 
@@ -719,7 +714,7 @@ class Editor(Toplevel):
 			self.search_idx = ('1.0', '1.0')
 			self.search_pos = 0
 				
-		self.contents.tag_remove('found', '1.0', END)
+		self.contents.tag_remove('found', '1.0', tkinter.END)
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
 		# change color
 		self.contents.tag_add('found', self.search_idx[0], self.search_idx[1])
@@ -739,11 +734,11 @@ class Editor(Toplevel):
 		first = self.contents.tag_ranges('match')[0]
 	
 		if self.contents.compare(self.search_idx[0], '<=', first):
-			self.search_idx = (END, END)
+			self.search_idx = (tkinter.END, tkinter.END)
 			self.search_pos = self.search_matches + 1
 
 			
-		self.contents.tag_remove('found', '1.0', END)
+		self.contents.tag_remove('found', '1.0', tkinter.END)
 		
 		self.search_idx = self.contents.tag_prevrange('match', self.search_idx[0])
 		
@@ -762,8 +757,8 @@ class Editor(Toplevel):
 		
 	def start_search(self, event=None):
 		self.old_word = self.entry.get()
-		self.contents.tag_remove('match', '1.0', END)
-		self.contents.tag_remove('found', '1.0', END)
+		self.contents.tag_remove('match', '1.0', tkinter.END)
+		self.contents.tag_remove('found', '1.0', tkinter.END)
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
 		self.search_pos = 0
@@ -774,7 +769,7 @@ class Editor(Toplevel):
 			flag_start = True
 			
 			while True:
-				pos = self.contents.search(self.old_word, pos, END)
+				pos = self.contents.search(self.old_word, pos, tkinter.END)
 				if not pos: break
 				self.search_matches += 1
 				lastpos = "%s + %dc" % (pos, wordlen)
@@ -807,11 +802,11 @@ class Editor(Toplevel):
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
-		self.contents.tag_remove('match', '1.0', END)
-		self.contents.tag_remove('found', '1.0', END)
+		self.contents.tag_remove('match', '1.0', tkinter.END)
+		self.contents.tag_remove('found', '1.0', tkinter.END)
 		self.entry.bind("<Return>", self.load)
 		self.bind("<Escape>", lambda e: self.iconify())
-		self.entry.delete(0,END)
+		self.entry.delete(0,tkinter.END)
 		self.entry.insert(0,self.filename)
 		self.new_word = ''
 		self.old_word = ''
@@ -828,7 +823,7 @@ class Editor(Toplevel):
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
 		self.title('Search:')
-		self.entry.delete(0, END)
+		self.entry.delete(0, tkinter.END)
 		self.entry.focus_set()
 		return "break"
 			
@@ -843,7 +838,7 @@ class Editor(Toplevel):
 		self.entry.bind("<Return>", self.start_search)
 		self.bind("<Escape>", self.stop_search)
 		self.title('Replace this:')
-		self.entry.delete(0, END)
+		self.entry.delete(0, tkinter.END)
 		self.entry.focus_set()
 		return "break"
 
@@ -857,10 +852,10 @@ class Editor(Toplevel):
 		self.search_matches = 0
 		wordlen = len(self.old_word)
 		pos = '1.0'
-		self.contents.tag_remove('match', '1.0', END)
+		self.contents.tag_remove('match', '1.0', tkinter.END)
 		
 		while True:
-			pos = self.contents.search(self.old_word, pos, END)
+			pos = self.contents.search(self.old_word, pos, tkinter.END)
 			if not pos: break
 			self.search_matches += 1
 			lastpos = "%s + %dc" % (pos, wordlen)
@@ -909,7 +904,7 @@ class Editor(Toplevel):
 
 
 if __name__ == '__main__':
-	root = Tk().withdraw()
+	root = tkinter.Tk().withdraw()
 	e = Editor(root)
 	e.mainloop()
 

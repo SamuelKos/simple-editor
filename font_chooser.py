@@ -1,29 +1,25 @@
-from tkinter import (
-Toplevel, Tk, Frame, Text, Listbox, Spinbox, SINGLE
-)
-
-from tkinter.font import Font
 import tkinter
 
-class Fontchooser(Toplevel):
+
+class Fontchooser(tkinter.Toplevel):
 		
 	def __init__(self, root, font_instance):
 		super().__init__(root)
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
-		self.frame = Frame(self, width=480, height=275)
+		self.frame = tkinter.Frame(self, width=480, height=275)
 		self.frame.pack(pady=10)
 		self.font = font_instance
 		
-		# Freeze Frame in place
+		# Freeze tkinter.Frame in place
 		self.frame.grid_propagate(False)
 		self.frame.columnconfigure(0, weight=10)
 
-		self.t = Text(self.frame, font=self.font)
+		self.t = tkinter.Text(self.frame, font=self.font)
 		self.t.grid(row=0, column=0)
 		self.t.grid_rowconfigure(0, weight=1)
 		self.t.grid_columnconfigure(0, weight=1)
 		
-		self.lb = Listbox(self, selectmode=SINGLE, width=80)
+		self.lb = tkinter.Listbox(self, selectmode=tkinter.SINGLE, width=80)
 		self.lb.pack()
 		
 		self.fontlist = [f for f in tkinter.font.families()]
@@ -35,7 +31,7 @@ class Fontchooser(Toplevel):
 		self.max = 24
 		self.min = 8
 		
-		self.sb = Spinbox(self, from_=self.min, to=self.max, increment=2, command=self.change_font)
+		self.sb = tkinter.Spinbox(self, from_=self.min, to=self.max, increment=2, command=self.change_font)
 		self.sb.pack()
 		
 		# get current fontsize and show it in spinbox
