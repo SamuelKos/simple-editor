@@ -1,6 +1,5 @@
-#TODO: 	if replace(pattern, string) and pattern in string:
-#			issue: replace() matches already replaced parts of contents
-#			while it should ignore them. In short: replace is rematching.
+#TODO: 	
+
 
 # from standard library
 import tkinter.scrolledtext
@@ -25,10 +24,10 @@ import subprocess
 #
 # If you are about to use tkinter Python-module, consider
 # using some other GUI-library like Qt, GTK
-# or completely other language like Tcl to name one.
+# or completely different language like Tcl to name one. 
 ###############################################################################
 #
-# Below is short example from one book about how to use option database.
+# Below is short example from one book about how to use option database. 
 # I am not using option database in this editor.
 # A typical option database text file may look like the following:
 
@@ -87,6 +86,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.tab_width = self.font.measure(4*' ')
 		
+		self.replace_overlap_index = None
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
 		self.search_pos = 0
@@ -811,6 +811,7 @@ class Editor(tkinter.Toplevel):
 		self.new_word = ''
 		self.old_word = ''
 		self.search_matches = 0
+		self.replace_overlap_index = None
 		self.title(self.titletext)
 		self.state = 'normal'
 		self.contents.focus_set()
@@ -851,16 +852,41 @@ class Editor(tkinter.Toplevel):
 		self.contents.config(state='normal')
 		self.search_matches = 0
 		wordlen = len(self.old_word)
+		wordlen2 = len(self.new_word)
 		pos = '1.0'
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		
+		# Next while-loop tags matches again, this is the main reason why
+		# there is a problem if new_word contains old_word:it will be rematched.
+		# This is why when there is a match, we move 
+		# replace_overlap_index characters back and check if there already is
+		# new_word. If so, it means there have already happened a replacement
+		# and therefore search pos must be recalculated over this manifestation
+		# of new_word. 
+		 
 		while True:
 			pos = self.contents.search(self.old_word, pos, tkinter.END)
 			if not pos: break
-			self.search_matches += 1
-			lastpos = "%s + %dc" % (pos, wordlen)
-			self.contents.tag_add('match', pos, lastpos)
-			pos = "%s + %dc" % (pos, wordlen+1)
+			 
+			if self.replace_overlap_index != None:
+				# find the startpos (pos2) and lastpos of new_word:
+				tmp = int(pos.split('.')[1]) - self.replace_overlap_index
+				pos2 = pos.split('.')[0] +'.'+ str(tmp)
+				lastpos = "%s + %dc" % (pos2, wordlen2)
+				
+				if self.contents.get(pos2, lastpos) == self.new_word:
+					# skip this match
+					pos = "%s + %dc" % (pos2, wordlen2+1)
+				else:
+					lastpos = "%s + %dc" % (pos, wordlen)
+					self.contents.tag_add('match', pos, lastpos)
+					pos = "%s + %dc" % (pos, wordlen+1)
+					self.search_matches += 1
+			else:
+				lastpos = "%s + %dc" % (pos, wordlen)
+				self.contents.tag_add('match', pos, lastpos)
+				pos = "%s + %dc" % (pos, wordlen+1)
+				self.search_matches += 1
 
 		self.contents.tag_remove('found', self.search_idx[0], self.search_idx[1])
 		self.contents.tag_remove('match', self.search_idx[0], self.search_idx[1])
@@ -885,9 +911,16 @@ class Editor(tkinter.Toplevel):
 		
 	def start_replace(self, event=None):
 		self.new_word = self.entry.get()
+		self.replace_overlap_index = None
 		self.bind("<Alt-n>", self.show_next)
 		self.bind("<Alt-p>", self.show_prev)
-
+		
+		# Check if new_word contains old_word, if so:
+		# record its overlap-index, which we need in do_single_replace()
+		# (explanation for why this is needed is given there)
+		if self.old_word in self.new_word:
+			self.replace_overlap_index = self.new_word.index(self.old_word)
+			
 		if self.state == 'replace':
 			self.entry.bind("<Return>", self.do_single_replace)
 			self.title('Replacing %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
