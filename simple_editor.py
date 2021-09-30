@@ -258,6 +258,7 @@ class Editor(tkinter.Toplevel):
 			line = errline + '.0'
 			self.contents.see(line)
 			self.contents.mark_set('insert', line)
+			self.bind("<Escape>", lambda e: self.iconify())
 			
 			
 	def run(self):
@@ -283,6 +284,7 @@ class Editor(tkinter.Toplevel):
 		print(res.stdout)
 		
 		if res.returncode != 0:
+			self.bind("<Escape>", self.stop_show_errors)
 			self.taglinks = dict()
 			self.errlines = list()
 			
@@ -316,7 +318,7 @@ class Editor(tkinter.Toplevel):
 				self.taglinks[tagname] = self.tag_link
 				
 				# parse filepath and linenums from errors
-				if 'File' in line and 'line' in line:
+				if 'File ' in line and 'line ' in line:
 					data = line.split(',')[:2]
 					linenum = data[1][6:]
 					filepath = data[0][8:-1]
@@ -329,6 +331,8 @@ class Editor(tkinter.Toplevel):
 	def show_errors(self):
 		''' Show modified traceback from last run.
 		'''
+		
+		self.bind("<Escape>", self.stop_show_errors)
 
 		if len(self.errlines) != 0:
 			self.contents.delete('1.0', tkinter.END)
@@ -338,7 +342,7 @@ class Editor(tkinter.Toplevel):
 				tmp = line
 				
 				# parse filepath and linenums from errors
-				if 'File' in line and 'line' in line:
+				if 'File ' in line and 'line ' in line:
 					data = line.split(',')[:2]
 					linenum = data[1][6:]
 					filepath = data[0][8:-1]
@@ -348,8 +352,23 @@ class Editor(tkinter.Toplevel):
 				else:
 					self.contents.insert(tkinter.INSERT, tmp +"\n")
 
-	
-			
+									
+	def stop_show_errors(self, event=None):
+		self.bind("<Escape>", lambda e: self.iconify())
+		
+		try:
+			f = open(self.filename, encoding='utf-8')
+		except OSError as e:
+			print(e)
+		else:
+			self.contents.delete('1.0', tkinter.END)
+
+			for line in f.readlines():
+				self.contents.insert(tkinter.INSERT, line)
+
+			f.close()
+
+
 	def tabify(self, line):
 		
 		indent_stop_index = 0
