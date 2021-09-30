@@ -316,7 +316,7 @@ class Editor(tkinter.Toplevel):
 				self.taglinks[tagname] = self.tag_link
 				
 				# parse filepath and linenums from errors
-				if 'File' and ',' in line:
+				if 'File' in line and 'line' in line:
 					data = line.split(',')[:2]
 					linenum = data[1][6:]
 					filepath = data[0][8:-1]
@@ -338,7 +338,7 @@ class Editor(tkinter.Toplevel):
 				tmp = line
 				
 				# parse filepath and linenums from errors
-				if 'File' and ',' in line:
+				if 'File' in line and 'line' in line:
 					data = line.split(',')[:2]
 					linenum = data[1][6:]
 					filepath = data[0][8:-1]
