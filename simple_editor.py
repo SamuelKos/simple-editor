@@ -1,6 +1,3 @@
-#TODO: 	
-
-
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
@@ -655,9 +652,17 @@ class Editor(tkinter.Toplevel):
 
 	def return_override(self, event):
 		# Cursor indexes when pressed return:
-		line = int(self.contents.index(tkinter.INSERT).split('.')[0])
-		row = int(self.contents.index(tkinter.INSERT).split('.')[1])
+		line, row = map(int, self.contents.index(tkinter.INSERT).split('.'))			
+		# is same as:
+		# line = int(self.contents.index(tkinter.INSERT).split('.')[0])
+		# row = int(self.contents.index(tkinter.INSERT).split('.')[1])
 		
+		# First an easy case:
+		if row == 0:
+			self.contents.insert(tkinter.INSERT, '\n')
+			self.contents.edit_separator()
+			return "break"
+				
 		# Empty line check:
 		# If line is empty but has tabs etc. And cursor is in the middle
 		# of this invisible line and then pressed return:
@@ -673,7 +678,7 @@ class Editor(tkinter.Toplevel):
 		# and line is not empty.
 		if tmp[:row].isspace() and not tmp[row:].isspace():
 			self.contents.insert(tkinter.INSERT, '\n')
-			self.contents.insert('%s.0' % str(int(line)+1), tmp[:row])
+			self.contents.insert('%s.0' % str(line+1), tmp[:row])
 			self.contents.edit_separator()
 			return "break"
 		else:
@@ -799,6 +804,7 @@ class Editor(tkinter.Toplevel):
 				
 	def stop_search(self, event=None):
 		self.contents.config(state='normal')
+		self.entry.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
@@ -850,6 +856,7 @@ class Editor(tkinter.Toplevel):
 		
 	def do_single_replace(self, event=None):
 		self.contents.config(state='normal')
+		self.entry.config(state='disabled')
 		self.search_matches = 0
 		wordlen = len(self.old_word)
 		wordlen2 = len(self.new_word)
@@ -911,22 +918,27 @@ class Editor(tkinter.Toplevel):
 		
 	def start_replace(self, event=None):
 		self.new_word = self.entry.get()
-		self.replace_overlap_index = None
-		self.bind("<Alt-n>", self.show_next)
-		self.bind("<Alt-p>", self.show_prev)
 		
-		# Check if new_word contains old_word, if so:
-		# record its overlap-index, which we need in do_single_replace()
-		# (explanation for why this is needed is given there)
-		if self.old_word in self.new_word:
-			self.replace_overlap_index = self.new_word.index(self.old_word)
+		if self.old_word == self.new_word:
+			return
+		else:
+		
+			self.replace_overlap_index = None
+			self.bind("<Alt-n>", self.show_next)
+			self.bind("<Alt-p>", self.show_prev)
 			
-		if self.state == 'replace':
-			self.entry.bind("<Return>", self.do_single_replace)
-			self.title('Replacing %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
-		elif self.state == 'replace_all':
-			self.entry.bind("<Return>", self.do_replace_all)
-			self.title('Replacing ALL %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
+			# Check if new_word contains old_word, if so:
+			# record its overlap-index, which we need in do_single_replace()
+			# (explanation for why this is needed is given there)
+			if self.old_word in self.new_word:
+				self.replace_overlap_index = self.new_word.index(self.old_word)
+				
+			if self.state == 'replace':
+				self.entry.bind("<Return>", self.do_single_replace)
+				self.title('Replacing %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
+			elif self.state == 'replace_all':
+				self.entry.bind("<Return>", self.do_replace_all)
+				self.title('Replacing ALL %s matches of %s with: %s' % (str(self.search_matches), self.old_word, self.new_word) )
 
 
 ################ Replace End
