@@ -44,6 +44,8 @@ import subprocess
 ##	root.option_readfile('optionDB.txt')
 ##
 
+ICONPATH = r"./icons/editor.png"
+
 			
 class Editor(tkinter.Toplevel):
 
@@ -90,26 +92,29 @@ class Editor(tkinter.Toplevel):
 		self.old_word = ''
 		self.new_word = ''
 		self.errlines = list()
-		
 		self.state = 'normal'
-		self.pic = tkinter.Image("photo", file="./icons/editor.png")
-		self.tk.call('wm','iconphoto', self._w, self.pic)
 		
-		self.bind("<Escape>", lambda e: self.iconify())
+		if ICONPATH:
+			try:
+				self.pic = tkinter.Image("photo", file=ICONPATH)
+				self.tk.call('wm','iconphoto', self._w, self.pic)
+			except tkinter.TclError as e:
+				print(e)
 		
 		self.HELPTXT = '''Keyboard shortcuts:
 		
 		Ctrl-f search
 		Ctrl-r replace
-		Ctrl-R replace_all
+		Ctrl-R replace all
 		Ctrl-g gotoline
+		Ctrl-p choose font
 		
 		Ctrl-C comment
 		Ctrl-U uncomment
 		Ctrl-> indent
 		Ctrl-< unindent
 		
-		Ctrl-a select_all
+		Ctrl-a select all
 		Ctrl-c copy
 		Ctrl-v paste
 		Ctrl-z undo
@@ -117,20 +122,21 @@ class Editor(tkinter.Toplevel):
 
 
 		While searching:
-		Alt-n show_next
-		Alt-p show_prev
+		Alt-n next match
+		Alt-p prev match
 		
 		'''
 		
 		# Layout Begin:
 		####################################################
+		self.bind("<Escape>", lambda e: self.iconify())
 		self.bind("<Button-3>", self.raise_popup)
 		self.bind("<Control-f>", self.search)
 		self.bind("<Control-r>", self.replace)
 		self.bind("<Control-R>", self.replace_all)
 		self.bind("<Control-g>", self.gotoline)
 		
-		self.contents = tkinter.scrolledtext.ScrolledText(self, background='#000000', foreground='#D3D7CF', insertbackground='#D3D7CF', font=self.font, blockcursor=True, tabs=(self.tab_width, ), tabstyle='wordprocessor', undo=True, maxundo=10, autoseparators=True)
+		self.contents = tkinter.scrolledtext.ScrolledText(self, background='#000000', foreground='#D3D7CF', insertbackground='#D3D7CF', font=self.font, blockcursor=True, tabs=(self.tab_width, ), tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
@@ -149,6 +155,9 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-less>", self.unindent)
 		self.contents.bind("<Control-a>", self.select_all)
 		self.contents.bind("<Control-p>", self.font_choose)
+		self.contents.bind("<Control-z>", self.undo_override)
+		self.contents.bind("<Control-Z>", self.redo_override)
+		
 		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
 		
 		self.popup_whohasfocus = None
@@ -199,7 +208,7 @@ class Editor(tkinter.Toplevel):
 
 	def do_nothing(self, event=None):
 		pass
-		
+	
 		
 	def font_choose(self, event=None):
 		self.choose = font_chooser.Fontchooser(self.top, self.font)
@@ -329,7 +338,7 @@ class Editor(tkinter.Toplevel):
 				
 
 	def show_errors(self):
-		''' Show modified traceback from last run.
+		''' Show traceback with added hyperlinks from last run.
 		'''
 		
 		self.bind("<Escape>", self.stop_show_errors)
@@ -410,7 +419,7 @@ class Editor(tkinter.Toplevel):
 		asked = False
 		
 		# Check if user entered manually filepath (in entry)
-		# before pressing Open:
+		# before pressing Open, get filepath and open it right away:
 		
 		if self.flag_init and tmp != '' and tmp != None:
 			
@@ -437,7 +446,14 @@ class Editor(tkinter.Toplevel):
 			################################### End of Check
 			
 		else:
-
+			# Normal cases: get filepath in different normal cases and then
+			# try to open. If filename is tmp it means user wants to open
+			# another file with pressing open, so we show filechooser menu.
+			# no_such_file happens if user has tried to open with entry but
+			# file does not exist. Filename can be None if flag_init is true
+			# as it is if we have empty editor at startup and press open. It
+			# stays None if dialog is closed without selection or error occurs.
+			
 			if self.filename in (tmp, None) or no_such_file:
 				d = tkinter.filedialog.FileDialog(self)
 				
@@ -459,33 +475,44 @@ class Editor(tkinter.Toplevel):
 				if self.filename == None:  #pressed close or cancel in filedialog
 					self.filename = save
 			else:
-				# If trying to open from curdir without full path
-				if '/' not in tmp:
-					tmp = os.path.abspath('.') + '/' + tmp
-					
-				self.filename = tmp
-	
-			try:
-				f = open(self.filename, encoding='utf-8')
+				# There was no flag_init so something is open and user tries to 
+				# be clever and open another file from entry
+				# (for the first time because no_such_file=False)
 				
-			except OSError as e:
-				print(e)
-				#file tmp does not exist, reverting back to old file and open filedialog
-				self.filename = save
-
-				if not no_such_file and not asked:
-					self.load(no_such_file=True)
-			else:
-				self.contents.delete('1.0', tkinter.END)
-
-				for line in f.readlines():
-					self.contents.insert(tkinter.INSERT, line)
-
-				f.close()
-				self.entry.delete(0, tkinter.END)
-				self.entry.insert(0, self.filename)
-				self.contents.edit_reset()
-				self.flag_init = False
+				# If trying to open from curdir without full path
+				if '/' not in tmp and '.py' in tmp:
+					tmp = os.path.abspath('.') + '/' + tmp
+				
+				if tmp != '' and '.py' in tmp:
+					self.filename = tmp
+				
+			# We now have filepath from one of above cases. Now try to open it.
+			# Of course there is a possibility that user opens empty editor,
+			# then presses open but does not choose a file.
+			# So check that first.
+			
+			if self.filename != None:
+				try:
+					f = open(self.filename, encoding='utf-8')
+					
+				except OSError as e:
+					print(e)
+					#file tmp does not exist, reverting back to old file and open filedialog
+					self.filename = save
+	
+					if not no_such_file and not asked:
+						self.load(no_such_file=True)
+				else:
+					self.contents.delete('1.0', tkinter.END)
+	
+					for line in f.readlines():
+						self.contents.insert(tkinter.INSERT, line)
+	
+					f.close()
+					self.entry.delete(0, tkinter.END)
+					self.entry.insert(0, self.filename)
+					self.contents.edit_reset()
+					self.flag_init = False
 				
 	
 	def save(self):
@@ -574,15 +601,19 @@ class Editor(tkinter.Toplevel):
 	def undo_override(self, event=None):
 		try:
 			self.contents.edit_undo()
-		except tkinter.TclError as e:
-			print(e)
+		except tkinter.TclError:
+			self.contents.bell()
+			
+		return 'break'
 		
 		
 	def redo_override(self, event=None):
 		try:
 			self.contents.edit_redo()
-		except tkinter.TclError as e:
-			print(e)
+		except tkinter.TclError:
+			self.contents.bell()
+			
+		return 'break'
 	
 	
 	def indent(self, event=None):
@@ -679,48 +710,30 @@ class Editor(tkinter.Toplevel):
 		# First an easy case:
 		if row == 0:
 			self.contents.insert(tkinter.INSERT, '\n')
+			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
 			return "break"
 				
-		# Empty line check:
-		# If line is empty but has tabs etc. And cursor is in the middle
-		# of this invisible line and then pressed return:
-		# Indentation in next line must be set to cursor position
-		# of previous line. So line must be 'rstripped' to cursor.
-		# Without doing this, we would add all the empty space, from cursor
-		# to the line-end, to the new line because of the + 'a' -hack we do
-		# below.
+		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
 		
-		tmp = self.contents.get('%s.0' % line,'%s.0 lineend' % line)
-		
-		# First one special case: check if cursor is inside indentation,
+		# Then one special case: check if cursor is inside indentation,
 		# and line is not empty.
+		
 		if tmp[:row].isspace() and not tmp[row:].isspace():
 			self.contents.insert(tkinter.INSERT, '\n')
 			self.contents.insert('%s.0' % str(line+1), tmp[:row])
+			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
 			return "break"
-		else:
-			# If line (after cursor) is 'empty', 'rstrip' it to cursor:
-			if tmp[row:].isspace(): tmp = tmp[:row]
 			
-			tmp = tmp + 'a'
-			
-			# Explanation of +'a':
-			# We want to know where the first character of the next line (below)
-			# should be (we do this because we want 'auto'-indentation).
-			# Character should be indented similarly as previous line.
-			# So if previous line is not empty, it does not matter that we added
-			# 'a' because loop breaks before that. And if the line was empty before
-			# adding 'a', well now we avoid index error and get indentation right.
-			# (and next line stays empty)
-			
+		else:		
 			for i in range(len(tmp)):
 				if tmp[i] != '\t':
 					break
 	
 			self.contents.insert(tkinter.INSERT, '\n') # Manual newline because return is overrided.
 			self.contents.insert(tkinter.INSERT, i*'\t')
+			self.contents.see(f'{line+1}.0')
 			self.contents.edit_separator()
 			return "break"
 
@@ -919,6 +932,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.delete(self.search_idx[0], self.search_idx[1])
 		self.contents.insert(self.search_idx[0], self.new_word)
 		self.contents.config(state='disabled')
+		
 		self.search_matches -= 1
 		
 		if self.search_matches == 0:
