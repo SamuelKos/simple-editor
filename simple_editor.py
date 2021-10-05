@@ -1,3 +1,4 @@
+# todo help when nothing open fails
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
@@ -5,13 +6,20 @@ import tkinter.font
 import tkinter
 import os
 
-# from current directory 
+# from current directory
 import font_chooser
 
 # for executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
 
+##############################################################################
+#
+#	Keep (widget) references for debugging. This is common way I debug these
+#	tkinter apps. Launch the widget and from Python console you now
+#	have access to its reference, you can change attributes on the fly
+#	etc.  
+#
 ###############################################################################
 # config(**options) Modifies one or more widget options. If no options are
 # given, method returns a dictionary containing all current option values.
@@ -45,11 +53,36 @@ import subprocess
 ##
 
 ICONPATH = r"./icons/editor.png"
+HELPTXT = '''Keyboard shortcuts:
+		
+		Ctrl-f search
+		Ctrl-r replace
+		Ctrl-R replace all
+		Ctrl-g gotoline
+		Ctrl-p choose font
+		
+		Ctrl-C comment
+		Ctrl-U uncomment
+		Ctrl-> indent
+		Ctrl-< unindent
+		
+		Ctrl-a select all
+		Ctrl-c copy
+		Ctrl-v paste
+		Ctrl-z undo
+		Ctrl-Z redo
+
+
+		While searching:
+		Alt-n next match
+		Alt-p prev match
+		
+		'''
 
 			
 class Editor(tkinter.Toplevel):
 
-	def __init__(self, root, inputfile=None, hdpi=False):
+	def __init__(self, root, inputfile=None, hdpi=True):
 		super().__init__(root, class_='Simple Editor')
 		self.top = root
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
@@ -101,31 +134,7 @@ class Editor(tkinter.Toplevel):
 			except tkinter.TclError as e:
 				print(e)
 		
-		self.HELPTXT = '''Keyboard shortcuts:
-		
-		Ctrl-f search
-		Ctrl-r replace
-		Ctrl-R replace all
-		Ctrl-g gotoline
-		Ctrl-p choose font
-		
-		Ctrl-C comment
-		Ctrl-U uncomment
-		Ctrl-> indent
-		Ctrl-< unindent
-		
-		Ctrl-a select all
-		Ctrl-c copy
-		Ctrl-v paste
-		Ctrl-z undo
-		Ctrl-Z redo
-
-
-		While searching:
-		Alt-n next match
-		Alt-p prev match
-		
-		'''
+		self.helptxt = HELPTXT
 		
 		# Layout Begin:
 		####################################################
@@ -211,7 +220,7 @@ class Editor(tkinter.Toplevel):
 	
 		
 	def font_choose(self, event=None):
-		self.choose = font_chooser.Fontchooser(self.top, self.font)
+		self.choose = font_chooser.Fontchooser(self.top, [self.font, self.menufont])
 		return 'break'
 		
 
@@ -533,6 +542,7 @@ class Editor(tkinter.Toplevel):
 		f.write(tmp)
 		f.close()
 		self.filename = fpath_in_entry
+		self.flag_init = False
 
 
 	def raise_popup(self, event=None):
@@ -577,20 +587,20 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def stop_help(self, event=None):
-		self.filename = False
+		if not self.flag_init: self.filename = False
 		self.contents.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
-		self.load()
+		if not self.flag_init: self.load()
 		self.bind("<Escape>", lambda e: self.iconify())
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.contents.focus_set()
 	
 	
 	def help(self, event=None):
-		self.save()
+		if not self.flag_init: self.save()
 		self.contents.delete('1.0', tkinter.END)
-		self.contents.insert(tkinter.INSERT, self.HELPTXT)
+		self.contents.insert(tkinter.INSERT, self.helptxt)
 		self.contents.config(state='disabled')
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
@@ -940,13 +950,11 @@ class Editor(tkinter.Toplevel):
 
 	
 	def do_replace_all(self, event=None):
-		count = self.search_matches - 1
+		count = self.search_matches
 		
 		for i in range(count):
 			self.do_single_replace()
-			self.show_next()
-						
-		self.do_single_replace()
+			if i < (count - 1): self.show_next()
 				
 		
 	def start_replace(self, event=None):
