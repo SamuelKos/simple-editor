@@ -2,7 +2,6 @@
 GUI-editor for Python development. 
 Tested to work with Debian Buster and Bullseye. 
 It is meant to be used from Python console rather than standalone.
-* Update: fixes and better font-chooser.
 
 # Featuring
 * Indent - Unindent

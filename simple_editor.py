@@ -1,4 +1,3 @@
-# todo help when nothing open fails
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
@@ -13,13 +12,6 @@ import font_chooser
 # It means you have your installed dependencies available. By self.run()
 import subprocess
 
-##############################################################################
-#
-#	Keep (widget) references for debugging. This is common way I debug these
-#	tkinter apps. Launch the widget and from Python console you now
-#	have access to its reference, you can change attributes on the fly
-#	etc.  
-#
 ###############################################################################
 # config(**options) Modifies one or more widget options. If no options are
 # given, method returns a dictionary containing all current option values.
@@ -108,13 +100,13 @@ class Editor(tkinter.Toplevel):
 		if not self.fontname:
 			self.fontname = fontfamilies[0]
 			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
+			
+		self.font = tkinter.font.Font(family=self.fontname, size=24)
+		self.menufont = tkinter.font.Font(family=self.fontname, size=20)
 
 		if self.hdpi_screen == False:
-			self.font = tkinter.font.Font(family=self.fontname, size=12)
-			self.menufont = tkinter.font.Font(family=self.fontname, size=10)
-		else:
-			self.font = tkinter.font.Font(family=self.fontname, size=24)
-			self.menufont = tkinter.font.Font(family=self.fontname, size=20)
+			self.font['size'] = 12
+			self.menufont['size'] = 10
 		
 		self.tab_width = self.font.measure(4*' ')
 		

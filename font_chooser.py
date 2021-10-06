@@ -4,7 +4,7 @@ import tkinter
 class Fontchooser(tkinter.Toplevel):
 		
 	def __init__(self, root, fontlist):
-		''' root is tkinter.Tk instance
+		'''	root is tkinter.Tk instance
 			fontlist is list of tkinter.font.Font instances
 		'''
 		super().__init__(root)
@@ -12,7 +12,7 @@ class Fontchooser(tkinter.Toplevel):
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)		
 		self.fontnames = [f for f in tkinter.font.families()]
 		
-		# remove duplicates then sort
+		# Remove duplicates then sort
 		s = set(self.fontnames)
 		self.fontnames = [f for f in s]
 		self.fontnames.sort()
@@ -24,9 +24,9 @@ class Fontchooser(tkinter.Toplevel):
 		# They are dummy-names used only to distinguish fonts in list
 		# user gave as input.
 		self.fontdict = dict()
-		
 		self.option_menu_list = list()
-		for i,item in enumerate(self.fonts):
+
+		for i in range(len(self.fonts)):
 			pattern = f'FONT {i}'
 			self.fontdict[pattern] = i
 			# Here adding dummy-name to list which is used in optionmenu later:
@@ -86,12 +86,12 @@ class Fontchooser(tkinter.Toplevel):
 		self.sb.insert(0, fontsize)
 		
 		# Populate listbox
-		for i,f in enumerate(self.fontnames):
-			# get current fontnames index:
-			if f == self.font.actual("family"): fontindex = i
-			self.lb.insert('end', f)
+		for fontname in self.fontnames:
+			self.lb.insert('end', fontname)
 		
 		# Show current fontname in listbox
+		fontname = self.font.actual("family")
+		fontindex = self.fontnames.index(fontname)
 		self.lb.select_set(fontindex)
 		self.lb.see(fontindex)
 		
@@ -120,7 +120,7 @@ class Fontchooser(tkinter.Toplevel):
 		
 		
 	def optionmenu_command(self, event=None):
-		''' When font(instance) is selected from optionmenu.
+		'''	When font(instance) is selected from optionmenu.
 		'''
 		self.font = self.fonts[self.fontdict[self.var.get()]]
 		fontname = self.font.actual("family")
@@ -144,14 +144,15 @@ class Fontchooser(tkinter.Toplevel):
 
 		
 	def change_font(self, event=None):
-		''' Change values of current font-instance.
+		'''	Change values of current font-instance.
 		'''
 		try:
 			self.font.config(
 				family=self.lb.get(self.lb.curselection()),
 				size=self.sb.get()
 				)
-		except tkinter.TclError: pass
+		except tkinter.TclError as e:
+			print(e)
 		
 		
 	def quit_me(self):
