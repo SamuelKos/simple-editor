@@ -9,7 +9,6 @@ class Fontchooser(tkinter.Toplevel):
 		'''
 		super().__init__(root)
 		self.fonts = fontlist
-		self.protocol("WM_DELETE_WINDOW", self.quit_me)		
 		self.fontnames = [f for f in tkinter.font.families()]
 		
 		# Remove duplicates then sort
@@ -155,6 +154,3 @@ class Fontchooser(tkinter.Toplevel):
 			print(e)
 		
 		
-	def quit_me(self):
-		self.quit()
-		self.destroy()
