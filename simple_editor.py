@@ -101,13 +101,18 @@ class Editor(tkinter.Toplevel):
 			self.fontname = fontfamilies[0]
 			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
 			
-		self.font = tkinter.font.Font(family=self.fontname, size=24)
-		self.menufont = tkinter.font.Font(family=self.fontname, size=20)
-
-		if self.hdpi_screen == False:
-			self.font['size'] = 12
-			self.menufont['size'] = 10
+		self.font = tkinter.font.Font(family=self.fontname, size=12)
+		self.menufont = tkinter.font.Font(family=self.fontname, size=10)
 		
+		# Not setting font-size separately whether hdpi-screen or not. Only
+		# scrollbar width. Because of possible font-scaling by OS like in Debian
+		# Bullseye. So if using hdpi==false monitor you are fine and if using
+		# hdpi-screen==true and there is font-scaling by OS you are fine.
+		# Only if using hdpi-true monitor and there is no font-scaling by OS
+		# or whatever is responsible of such a thing then you have a problem
+		# with default font size being too small. But you can change it with
+		# font-chooser.
+
 		self.tab_width = self.font.measure(4*' ')
 		
 		self.replace_overlap_index = None
