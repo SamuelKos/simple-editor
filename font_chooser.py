@@ -111,7 +111,8 @@ class Fontchooser(tkinter.Toplevel):
 			
 		
 	def button_command(self, event=None):
-		''' In case there is font-scaling in use by OS.
+		''' In case there is not font-scaling in use by OS and
+			using hdpi-screen.
 		'''
 		widgetlist = [
 					self.optionmenu,
@@ -181,5 +182,4 @@ class Fontchooser(tkinter.Toplevel):
 				)
 		except tkinter.TclError as e:
 			print(e)
-		
-		
+

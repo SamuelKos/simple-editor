@@ -1,3 +1,4 @@
+#TODO: 'tabbed' editing with optionmenu
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
@@ -45,43 +46,45 @@ import subprocess
 ##
 
 ICONPATH = r"./icons/editor.png"
-HELPTXT = '''Keyboard shortcuts:
-		
-		Ctrl-f search
-		Ctrl-r replace
-		Ctrl-R replace all
-		Ctrl-g gotoline
-		Ctrl-p choose font
-		
-		Ctrl-C comment
-		Ctrl-U uncomment
-		Ctrl-> indent
-		Ctrl-< unindent
-		
-		Ctrl-a select all
-		Ctrl-c copy
-		Ctrl-v paste
-		Ctrl-z undo
-		Ctrl-Z redo
+HELPTXT = '''		Keyboard shortcuts:
 
+		Ctrl-f  Search
+		Ctrl-r  Replace
+		Ctrl-R  Replace all
+		Ctrl-g  Gotoline
+				
+		Ctrl-C  Comment
+		Ctrl-U  Uncomment
+		Ctrl->  Indent
+		Ctrl-<  Unindent
+		
+		Ctrl-a  Select all
+		Ctrl-c  Copy
+		Ctrl-v  Paste
+		Ctrl-z  Undo
+		Ctrl-Z  Redo
+		
+		Ctrl-p  Font setting
+		
+		Ctrl-plus 	Increase scrollbar-width
+		Ctrl-minus	Decrease scrollbar-width
 
 		While searching:
-		Alt-n next match
-		Alt-p prev match
+		Alt-n  Next match
+		Alt-p  Prev match
 		
 		'''
 
 			
 class Editor(tkinter.Toplevel):
 
-	def __init__(self, root, inputfile=None, hdpi=True):
+	def __init__(self, root, inputfile=None):
 		super().__init__(root, class_='Simple Editor')
 		self.top = root
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		self.titletext = 'Simple Editor'
 		self.title(self.titletext)
 		self.filename = None
-		self.hdpi_screen = hdpi
 		self.fontname = None
 		self.goodfonts = [
 					'Noto Mono',
@@ -109,7 +112,7 @@ class Editor(tkinter.Toplevel):
 		# Bullseye. So if using hdpi==false monitor you are fine and if using
 		# hdpi-screen==true and there is font-scaling by OS you are fine.
 		# Only if using hdpi-true monitor and there is no font-scaling by OS
-		# or whatever is responsible of such a thing then you have a problem
+		# or whatever is responsible of such a thing, then you have a problem
 		# with default font size being too small. But you can change it with
 		# font-chooser.
 
@@ -147,12 +150,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
 		
-		if hdpi == True:
-			self.contents.vbar.config(width=30)
-			self.contents.vbar.config(elementborderwidth=4)
-		else:
-			self.contents.vbar.config(width=20)
-			self.contents.vbar.config(elementborderwidth=3)
+		self.scrollbar_width = 30
+		self.elementborderwidth = 4
+			
+		self.contents.vbar.config(width=self.scrollbar_width)
+		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
 			
 		self.contents.bind("<Return>", self.return_override)
 		self.contents.bind("<Control-C>", self.comment)
@@ -163,6 +165,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-p>", self.font_choose)
 		self.contents.bind("<Control-z>", self.undo_override)
 		self.contents.bind("<Control-Z>", self.redo_override)
+		self.contents.bind("<Control-plus>", self.increase_scrollbar_width)
+		self.contents.bind("<Control-minus>", self.decrease_scrollbar_width)
 		
 		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
 		
@@ -214,10 +218,44 @@ class Editor(tkinter.Toplevel):
 
 	def do_nothing(self, event=None):
 		pass
-	
 		
-	def font_choose(self, event=None):
-		self.choose = font_chooser.Fontchooser(self.top, [self.font, self.menufont])
+		
+	def increase_scrollbar_width(self, event=None):
+		''' Change width of scrollbar of self.contents and of 
+			tkinter.filedialog.FileDialog which is used in self.load().
+			Shortcut: Ctrl-plus
+		'''
+		if self.scrollbar_width >= 100:
+			self.bell()
+			return 'break'
+			
+		self.scrollbar_width += 7
+		self.elementborderwidth += 1
+		self.contents.vbar.config(width=self.scrollbar_width)
+		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
+			
+		return 'break'
+		
+		
+	def decrease_scrollbar_width(self, event=None):
+		''' Change width of scrollbar of self.contents and of 
+			tkinter.filedialog.FileDialog which is used in self.load().
+			Shortcut: Ctrl-minus
+		'''
+		if self.scrollbar_width <= 0:
+			self.bell()
+			return 'break'
+			
+		self.scrollbar_width -= 7
+		self.elementborderwidth -= 1
+		self.contents.vbar.config(width=self.scrollbar_width)
+		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
+			
+		return 'break'
+		
+		
+	def font_choose(self, event=None):		
+		self.choose = font_chooser.Fontchooser(self.top, [self.font, self.menufont])				
 		return 'break'
 		
 
@@ -470,11 +508,12 @@ class Editor(tkinter.Toplevel):
 				d.filter_button.configure(font=self.menufont)
 				d.ok_button.configure(font=self.menufont)
 				d.selection.configure(font=self.menufont)
+
+				d.dirsbar.configure(width=self.scrollbar_width)
+				d.filesbar.configure(width=self.scrollbar_width)
+				d.filesbar.configure(elementborderwidth=self.elementborderwidth)
+				d.dirsbar.configure(elementborderwidth=self.elementborderwidth)
 				
-				if self.hdpi_screen == True:
-					d.dirsbar.configure(width=20)
-					d.filesbar.configure(width=20)
-					
 				self.filename = d.go('.')
 				
 				asked = True
@@ -764,7 +803,16 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_add('found', self.search_idx[0], self.search_idx[1])
 		self.contents.see(self.search_idx[0])
 		self.search_pos += 1
-		self.title('Search: %s/%s' % (str(self.search_pos), str(self.search_matches)))
+		
+		# compare found to match
+		num_matches = int(len(self.contents.tag_ranges('match'))/2)
+		ref = self.contents.tag_ranges('found')[0]
+		
+		for c in range(num_matches):
+			tmp = self.contents.tag_ranges('match')[c*2]
+			if self.contents.compare(ref, '==', tmp): break
+		
+		self.title('Search: %s/%s' % (str(c+1), str(self.search_matches)))
 		
 		if self.search_matches == 1:
 			self.bind("<Alt-n>", self.do_nothing)
@@ -790,7 +838,16 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_add('found', self.search_idx[0], self.search_idx[1])
 		self.contents.see(self.search_idx[0])
 		self.search_pos -= 1
-		self.title('Search: %s/%s' % (str(self.search_pos), str(self.search_matches)))
+		
+		# compare found to match
+		num_matches = int(len(self.contents.tag_ranges('match'))/2)
+		ref = self.contents.tag_ranges('found')[0]
+		
+		for c in range(num_matches):
+			tmp = self.contents.tag_ranges('match')[c*2]
+			if self.contents.compare(ref, '==', tmp): break
+			
+		self.title('Search: %s/%s' % (str(c+1), str(self.search_matches)))
 		
 		if self.search_matches == 1:
 			self.bind("<Alt-n>", self.do_nothing)
