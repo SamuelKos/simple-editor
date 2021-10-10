@@ -2,7 +2,6 @@
 GUI-editor for Python development. 
 Tested to work with Debian Buster and Bullseye. 
 It is meant to be used from Python console rather than standalone.
-* Update: finally fixed search/replace titles, dumped hdpi-hassle, made shortcut for scrollbar width adjustment
 
 # Featuring
 * Indent - Unindent

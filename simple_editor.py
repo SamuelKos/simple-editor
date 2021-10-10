@@ -138,12 +138,14 @@ class Editor(tkinter.Toplevel):
 		
 		# Layout Begin:
 		####################################################
+		self.bind("<Control-minus>", self.decrease_scrollbar_width)
+		self.bind("<Control-plus>", self.increase_scrollbar_width)
 		self.bind("<Escape>", lambda e: self.iconify())
-		self.bind("<Button-3>", self.raise_popup)
-		self.bind("<Control-f>", self.search)
-		self.bind("<Control-r>", self.replace)
 		self.bind("<Control-R>", self.replace_all)
+		self.bind("<Button-3>", self.raise_popup)
 		self.bind("<Control-g>", self.gotoline)
+		self.bind("<Control-r>", self.replace)
+		self.bind("<Control-f>", self.search)
 		
 		self.contents = tkinter.scrolledtext.ScrolledText(self, background='#000000', foreground='#D3D7CF', insertbackground='#D3D7CF', font=self.font, blockcursor=True, tabs=(self.tab_width, ), tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
 		
@@ -165,8 +167,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-p>", self.font_choose)
 		self.contents.bind("<Control-z>", self.undo_override)
 		self.contents.bind("<Control-Z>", self.redo_override)
-		self.contents.bind("<Control-plus>", self.increase_scrollbar_width)
-		self.contents.bind("<Control-minus>", self.decrease_scrollbar_width)
 		
 		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
 		
@@ -221,7 +221,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def increase_scrollbar_width(self, event=None):
-		''' Change width of scrollbar of self.contents and of 
+		'''	Change width of scrollbar of self.contents and of 
 			tkinter.filedialog.FileDialog which is used in self.load().
 			Shortcut: Ctrl-plus
 		'''
@@ -238,7 +238,7 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def decrease_scrollbar_width(self, event=None):
-		''' Change width of scrollbar of self.contents and of 
+		'''	Change width of scrollbar of self.contents and of 
 			tkinter.filedialog.FileDialog which is used in self.load().
 			Shortcut: Ctrl-minus
 		'''
@@ -274,7 +274,7 @@ class Editor(tkinter.Toplevel):
 
 
 	def lclick(self, tagname, event=None):
-		''' Used in error-page, when hyperlink tagname is clicked.
+		'''	Used in error-page, when hyperlink tagname is clicked.
 		
 			self.taglinks is dict with tagname as key
 			and function (self.taglink) as value.
@@ -315,7 +315,7 @@ class Editor(tkinter.Toplevel):
 			
 			
 	def run(self):
-		''' Run file currently being edited. This can not catch errlines of
+		'''	Run file currently being edited. This can not catch errlines of
 			those exceptions that are catched. Like:
 			
 			try:
@@ -561,7 +561,7 @@ class Editor(tkinter.Toplevel):
 				
 	
 	def save(self):
-		''' No error catching because user wants to know if file was not
+		'''	No error catching because user wants to know if file was not
 			saved. As error-message in console.
 		'''
 		tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
