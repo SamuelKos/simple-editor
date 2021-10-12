@@ -179,8 +179,8 @@ class Editor(tkinter.Toplevel):
 		# Try to apply saved configurations:
 		try:
 			f = open(CONFPATH)
-		except OSError:
-			pass
+		except OSError as e:
+			print(e.__str__())
 		else:
 			self.load_config(f)
 			f.close()
@@ -1066,6 +1066,7 @@ class Editor(tkinter.Toplevel):
 ################ Replace End
 	
 	def quit_me(self):
+		self.save_config()
 		self.quit()
 		self.destroy()
 

@@ -2,7 +2,6 @@
 GUI-editor for Python development. 
 Tested to work with Debian Buster and Bullseye. 
 It is meant to be used from Python console rather than standalone.
-* Update: configuration can now be saved
 
 # Featuring
 * Indent - Unindent
@@ -12,7 +11,7 @@ It is meant to be used from Python console rather than standalone.
 * Run current file
 * Click to open errors
 * Font Chooser
-
+* Persistent configuration
 
 # Lacking and not going to implement
 * Autocompletion
