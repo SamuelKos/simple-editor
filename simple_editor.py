@@ -4,6 +4,7 @@ import tkinter.scrolledtext
 import tkinter.filedialog
 import tkinter.font
 import tkinter
+import json
 import os
 
 # from current directory
@@ -24,29 +25,10 @@ import subprocess
 # using some other GUI-library like Qt, GTK
 # or completely different language like Tcl to name one. 
 ###############################################################################
-#
-# Below is short example from one book about how to use option database. 
-# I am not using option database in this editor.
-# A typical option database text file may look like the following:
-
-##	*font: Arial 10
-##	*Label*font: Times 12 bold
-##	*background: AntiqueWhite1
-##	*Text*background: #454545
-##	*Button*foreground:gray55
-##	*Button*relief: raised
-##	*Button*width: 3
-
-##	The asterisk ( * ) symbol here means that the particular style applies to all instances of
-##	the given widget.
-##	These entries are placed in an external text (.txt) file. To apply this styling to a
-##	particular piece of code, you simply call it using the option_readfile() call early in
-##	your code, as shown here:
-##	root.option_readfile('optionDB.txt')
-##
 
 ICONPATH = r"./icons/editor.png"
-HELPTXT = '''		Keyboard shortcuts:
+CONFPATH = r"./editor.cnf"
+HELPTEXT = '''		Keyboard shortcuts:
 
 		Ctrl-f  Search
 		Ctrl-r  Replace
@@ -65,6 +47,7 @@ HELPTXT = '''		Keyboard shortcuts:
 		Ctrl-Z  Redo
 		
 		Ctrl-p  Font setting
+		Ctrl-W	Save current settings
 		
 		Ctrl-plus 	Increase scrollbar-width
 		Ctrl-minus	Decrease scrollbar-width
@@ -78,7 +61,7 @@ HELPTXT = '''		Keyboard shortcuts:
 			
 class Editor(tkinter.Toplevel):
 
-	def __init__(self, root, inputfile=None):
+	def __init__(self, root):
 		super().__init__(root, class_='Simple Editor')
 		self.top = root
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
@@ -134,7 +117,7 @@ class Editor(tkinter.Toplevel):
 			except tkinter.TclError as e:
 				print(e)
 		
-		self.helptxt = HELPTXT
+		self.helptxt = HELPTEXT
 		
 		# Layout Begin:
 		####################################################
@@ -146,6 +129,8 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-g>", self.gotoline)
 		self.bind("<Control-r>", self.replace)
 		self.bind("<Control-f>", self.search)
+		self.bind("<Control-p>", self.font_choose)
+		self.bind("<Control-W>", self.save_config)
 		
 		self.contents = tkinter.scrolledtext.ScrolledText(self, background='#000000', foreground='#D3D7CF', insertbackground='#D3D7CF', font=self.font, blockcursor=True, tabs=(self.tab_width, ), tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
 		
@@ -164,7 +149,6 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-greater>", self.indent)
 		self.contents.bind("<Control-less>", self.unindent)
 		self.contents.bind("<Control-a>", self.select_all)
-		self.contents.bind("<Control-p>", self.font_choose)
 		self.contents.bind("<Control-z>", self.undo_override)
 		self.contents.bind("<Control-Z>", self.redo_override)
 		
@@ -190,8 +174,17 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.pack(side=tkinter.LEFT)
 		self.btn_save=tkinter.Button(self, font=self.menufont, text='Save', command=self.save)
 		self.btn_save.pack(side=tkinter.LEFT)
-		self.local = inputfile
-
+		self.local = None
+		
+		# Try to apply saved configurations:
+		try:
+			f = open(CONFPATH)
+		except OSError:
+			pass
+		else:
+			self.load_config(f)
+			f.close()
+		
 		if self.local:
 			# Check if trying to open from curdir without full path
 			if '/' not in self.local:
@@ -219,6 +212,40 @@ class Editor(tkinter.Toplevel):
 	def do_nothing(self, event=None):
 		pass
 		
+
+	def save_config(self, event=None):
+		try:
+			f = open(CONFPATH, 'w', encoding='utf-8')
+		except OSError as e:
+			print(e.__str__())
+			print('Could not save configuration')
+		else:
+			data = dict()	
+			data['font'] = self.font.config()
+			data['menufont'] = self.menufont.config()
+			data['scrollbar_width'] = self.scrollbar_width
+			data['elementborderwidth'] = self.elementborderwidth
+			data['self.local'] = self.filename
+	
+			string_representation = json.dumps(data)
+			f.write(string_representation)
+			f.close()
+
+			
+	def load_config(self, fileobject):
+		string_representation = fileobject.read()
+		data = json.loads(string_representation)
+
+		self.font.config(**data['font'])
+		self.menufont.config(**data['menufont'])
+		
+		self.scrollbar_width 	= data['scrollbar_width']
+		self.elementborderwidth	= data['elementborderwidth']
+		self.contents.vbar.config(width=self.scrollbar_width)
+		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
+			
+		self.local = data['self.local']
+
 		
 	def increase_scrollbar_width(self, event=None):
 		'''	Change width of scrollbar of self.contents and of 
