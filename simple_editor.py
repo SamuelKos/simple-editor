@@ -4,6 +4,7 @@ import tkinter.scrolledtext
 import tkinter.filedialog
 import tkinter.font
 import tkinter
+import random
 import json
 import os
 
@@ -67,39 +68,6 @@ class Editor(tkinter.Toplevel):
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		self.titletext = 'Simple Editor'
 		self.title(self.titletext)
-		self.filename = None
-		self.fontname = None
-		self.goodfonts = [
-					'Noto Mono',
-					'Bitstream Vera Sans Mono',
-					'Liberation Mono',
-					'Inconsolata'
-					]
-					
-		fontfamilies = tkinter.font.families()
-
-		for fontname in self.goodfonts:
-			if fontname in fontfamilies:
-				self.fontname = fontname
-				break
-		
-		if not self.fontname:
-			self.fontname = fontfamilies[0]
-			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
-			
-		self.font = tkinter.font.Font(family=self.fontname, size=12)
-		self.menufont = tkinter.font.Font(family=self.fontname, size=10)
-		
-		# Not setting font-size separately whether hdpi-screen or not. Only
-		# scrollbar width. Because of possible font-scaling by OS like in Debian
-		# Bullseye. So if using hdpi==false monitor you are fine and if using
-		# hdpi-screen==true and there is font-scaling by OS you are fine.
-		# Only if using hdpi-true monitor and there is no font-scaling by OS
-		# or whatever is responsible of such a thing, then you have a problem
-		# with default font size being too small. But you can change it with
-		# font-chooser.
-
-		self.tab_width = self.font.measure(4*' ')
 		
 		self.replace_overlap_index = None
 		self.search_idx = ('1.0', '1.0')
@@ -132,17 +100,11 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-p>", self.font_choose)
 		self.bind("<Control-W>", self.save_config)
 		
-		self.contents = tkinter.scrolledtext.ScrolledText(self, background='#000000', foreground='#D3D7CF', insertbackground='#D3D7CF', font=self.font, blockcursor=True, tabs=(self.tab_width, ), tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
+		self.contents = tkinter.scrolledtext.ScrolledText(self, background='#000000', foreground='#D3D7CF', insertbackground='#D3D7CF', blockcursor=True, tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
 		
-		self.scrollbar_width = 30
-		self.elementborderwidth = 4
-			
-		self.contents.vbar.config(width=self.scrollbar_width)
-		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
-			
 		self.contents.bind("<Return>", self.return_override)
 		self.contents.bind("<Control-C>", self.comment)
 		self.contents.bind("<Control-U>", self.uncomment)
@@ -155,7 +117,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
 		
 		self.popup_whohasfocus = None
-		self.popup = tkinter.Menu(self, font=self.menufont, tearoff=0, bd=0, activeborderwidth=0)
+		self.popup = tkinter.Menu(self, tearoff=0, bd=0, activeborderwidth=0)
 		self.popup.bind("<FocusOut>", self.popup_focusOut) # to remove popup when clicked outside
 		self.popup.add_command(label="        copy", command=self.copy)
 		self.popup.add_command(label="       paste", command=self.paste)
@@ -167,32 +129,84 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="         run", command=self.run)
 		self.popup.add_command(label="        help", command=self.help)
 		
-		self.entry = tkinter.Entry(self, font=self.menufont)
+		self.entry = tkinter.Entry(self)
 		self.entry_return_bind_id = self.entry.bind("<Return>", self.load)
 		self.entry.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X)
-		self.btn_open=tkinter.Button(self, font=self.menufont, text='Open', command=self.load)
+		self.btn_open=tkinter.Button(self, text='Open', command=self.load)
 		self.btn_open.pack(side=tkinter.LEFT)
-		self.btn_save=tkinter.Button(self, font=self.menufont, text='Save', command=self.save)
+		self.btn_save=tkinter.Button(self, text='Save', command=self.save)
 		self.btn_save.pack(side=tkinter.LEFT)
+		
+		# Set Font Begin ##################################################
+		self.fontname = None
+		self.randfont = False
+		
+		self.goodfonts = [
+					'Noto Mono',
+					'Bitstream Vera Sans Mono',
+					'Liberation Mono',
+					'Inconsolata'
+					]
+					
+		self.badfonts = [
+					'Standard Symbols PS',
+					'OpenSymbol',
+					'Noto Color Emoji',	# This one is really bad, causes segfault and hard crash (killed by OS)
+					'FontAwesome',
+					'Droid Sans Fallback',
+					'D050000L'
+					]
+					
+		fontfamilies = [f for f in tkinter.font.families() if f not in self.badfonts]
+		random.shuffle(fontfamilies)
+		
+		for fontname in self.goodfonts:
+			if fontname in fontfamilies:
+				self.fontname = fontname
+				break
+		
+		if self.fontname == None: 
+			self.fontname = fontfamilies[0]
+			self.randfont = True
+		
+		# Initialize configurables
+		self.font = tkinter.font.Font(family=self.fontname, size=12)
+		self.menufont = tkinter.font.Font(family=self.fontname, size=10)
+		self.scrollbar_width = 30
+		self.elementborderwidth = 4	
+		self.contents.vbar.config(width=self.scrollbar_width)
+		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
+		self.filename = None
 		self.local = None
 		
 		# Try to apply saved configurations:
 		try:
 			f = open(CONFPATH)
+		except FileNotFoundError: pass
 		except OSError as e:
 			print(e.__str__())
+			os.remove(CONFPATH)
+			print('\nConfiguration file removed')
 		else:
 			self.load_config(f)
+			self.randfont = False
 			f.close()
+
+		if self.randfont == True:
+			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
+		
+		# Apply fonts to widgets
+		self.tab_width = self.font.measure(4*' ')
+		self.contents.config(font=self.font, tabs=(self.tab_width, ))
+		self.entry.config(font=self.menufont)
+		self.btn_open.config(font=self.menufont)
+		self.btn_save.config(font=self.menufont)
+		self.popup.config(font=self.menufont)
+		# Set Font End ##################################################
 		
 		if self.local:
-			# Check if trying to open from curdir without full path
-			if '/' not in self.local:
-				self.local = os.path.abspath('.') + '/' + self.local
-				
 			try:
 				f = open(self.local)
-				
 			except OSError as e:
 				print(e)
 				self.entry.delete(0, tkinter.END)

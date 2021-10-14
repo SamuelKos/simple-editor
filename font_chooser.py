@@ -9,7 +9,16 @@ class Fontchooser(tkinter.Toplevel):
 		'''
 		super().__init__(root)
 		self.fonts = fontlist
-		self.fontnames = [f for f in tkinter.font.families()]
+		self.badfonts = [
+					'Standard Symbols PS',
+					'OpenSymbol',
+					'Noto Color Emoji',
+					'FontAwesome',
+					'Droid Sans Fallback',
+					'D050000L'
+					]
+					
+		self.fontnames = [f for f in tkinter.font.families() if f not in self.badfonts]
 		
 		# Remove duplicates then sort
 		s = set(self.fontnames)
