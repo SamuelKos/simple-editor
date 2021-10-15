@@ -184,9 +184,9 @@ class Editor(tkinter.Toplevel):
 			f = open(CONFPATH)
 		except FileNotFoundError: pass
 		except OSError as e:
-			print(e.__str__())
-			os.remove(CONFPATH)
-			print('\nConfiguration file removed')
+			print(e.__str__())	# __str__() is for user (print to screen)
+			#print(e.__repr__())	# __repr__() is for developer (log to file)
+			print('\n Could not load existing configuration file %s' % CONFPATH)
 		else:
 			self.load_config(f)
 			self.randfont = False
@@ -208,7 +208,7 @@ class Editor(tkinter.Toplevel):
 			try:
 				f = open(self.local)
 			except OSError as e:
-				print(e)
+				print(e.__str__())
 				self.entry.delete(0, tkinter.END)
 				self.filename = None
 			else:
@@ -232,7 +232,7 @@ class Editor(tkinter.Toplevel):
 			f = open(CONFPATH, 'w', encoding='utf-8')
 		except OSError as e:
 			print(e.__str__())
-			print('Could not save configuration')
+			print('\nCould not save configuration')
 		else:
 			data = dict()	
 			data['font'] = self.font.config()
@@ -335,7 +335,8 @@ class Editor(tkinter.Toplevel):
 		try:
 			f = open(filepath, encoding='utf-8')
 		except OSError as e:
-			print(e)
+			print(e.__str__())
+			print('\n Could not open file %s' % filepath)
 		else:
 			self.contents.delete('1.0', tkinter.END)
 
@@ -453,7 +454,8 @@ class Editor(tkinter.Toplevel):
 		try:
 			f = open(self.filename, encoding='utf-8')
 		except OSError as e:
-			print(e)
+			print(e.__str__())
+			print('\n Could not open file %s' % self.filename)
 		else:
 			self.contents.delete('1.0', tkinter.END)
 
@@ -518,7 +520,8 @@ class Editor(tkinter.Toplevel):
 				f = open(self.filename)
 				
 			except OSError as e:
-				print(e)
+				print(e.__str__())
+				print('\n Could not open file %s' % self.filename)
 				self.filename = None
 			else:
 				self.contents.delete('1.0', tkinter.END)
@@ -582,7 +585,8 @@ class Editor(tkinter.Toplevel):
 					f = open(self.filename, encoding='utf-8')
 					
 				except OSError as e:
-					print(e)
+					print(e.__str__())
+					print('\n Could not open file %s' % self.filename)
 					#file tmp does not exist, reverting back to old file and open filedialog
 					self.filename = save
 	
@@ -602,9 +606,6 @@ class Editor(tkinter.Toplevel):
 				
 	
 	def save(self):
-		'''	No error catching because user wants to know if file was not
-			saved. As error-message in console.
-		'''
 		tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
 				
 		# Check indent (tabify):
@@ -614,12 +615,18 @@ class Editor(tkinter.Toplevel):
 		# explanation of: [:-1]
 		# otherwise there will be extra newline at the end of file
 		# so we remove the last symbol which is newline
+		
 		fpath_in_entry = self.entry.get()
-		f = open(fpath_in_entry, 'w', encoding='utf-8')		
-		f.write(tmp)
-		f.close()
-		self.filename = fpath_in_entry
-		self.flag_init = False
+		try:
+			f = open(fpath_in_entry, 'w', encoding='utf-8')
+		except OSError as e:
+			print(e.__str__())
+			print('\n Could save file %s' % fpath_in_entry)
+		else:
+			f.write(tmp)
+			f.close()
+			self.filename = fpath_in_entry
+			self.flag_init = False
 
 
 	def raise_popup(self, event=None):
