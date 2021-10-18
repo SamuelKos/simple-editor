@@ -43,6 +43,3 @@ class ColorChooser(tkinter.Toplevel):
 		self.destroy()
 		
 
-if __name__ == '__main__':
-	c = ColorChooser()
-	c.mainloop()

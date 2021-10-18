@@ -49,7 +49,7 @@ HELPTEXT = '''		Keyboard shortcuts:
 		Ctrl-Z  Redo
 		
 		Ctrl-p  Font setting
-		Ctrl-C  Color setting
+		Ctrl-s  Color setting
 		Ctrl-W	Save current settings
 		
 		Ctrl-plus 	Increase scrollbar-width
