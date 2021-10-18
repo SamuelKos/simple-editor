@@ -9,7 +9,8 @@ import json
 import os
 
 # from current directory
-import font_chooser
+import changefont
+import changecolor
 
 # for executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
@@ -48,6 +49,7 @@ HELPTEXT = '''		Keyboard shortcuts:
 		Ctrl-Z  Redo
 		
 		Ctrl-p  Font setting
+		Ctrl-C  Color setting
 		Ctrl-W	Save current settings
 		
 		Ctrl-plus 	Increase scrollbar-width
@@ -68,6 +70,8 @@ class Editor(tkinter.Toplevel):
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		self.titletext = 'Simple Editor'
 		self.title(self.titletext)
+		self.fgcolor = '#D3D7CF'
+		self.bgcolor = '#000000'
 		
 		self.replace_overlap_index = None
 		self.search_idx = ('1.0', '1.0')
@@ -97,10 +101,11 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-g>", self.gotoline)
 		self.bind("<Control-r>", self.replace)
 		self.bind("<Control-f>", self.search)
-		self.bind("<Control-p>", self.font_choose)
 		self.bind("<Control-W>", self.save_config)
+		self.bind("<Control-p>", self.font_choose)
+		self.bind("<Control-s>", self.color_choose)
 		
-		self.contents = tkinter.scrolledtext.ScrolledText(self, background='#000000', foreground='#D3D7CF', insertbackground='#D3D7CF', blockcursor=True, tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
+		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
@@ -169,7 +174,7 @@ class Editor(tkinter.Toplevel):
 			self.fontname = fontfamilies[0]
 			self.randfont = True
 		
-		# Initialize configurables
+		# Initialize rest of configurables
 		self.font = tkinter.font.Font(family=self.fontname, size=12)
 		self.menufont = tkinter.font.Font(family=self.fontname, size=10)
 		self.scrollbar_width = 30
@@ -195,9 +200,11 @@ class Editor(tkinter.Toplevel):
 		if self.randfont == True:
 			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
 		
-		# Apply fonts to widgets
-		self.tab_width = self.font.measure(4*' ')
-		self.contents.config(font=self.font, tabs=(self.tab_width, ))
+		# Apply fonts and colors to widgets
+		self.tab_width = self.font.measure(4*' ') #############################
+		self.contents.config(font=self.font, foreground=self.fgcolor,
+			background=self.bgcolor, insertbackground=self.fgcolor, 
+			tabs=(self.tab_width, ))
 		self.entry.config(font=self.menufont)
 		self.btn_open.config(font=self.menufont)
 		self.btn_save.config(font=self.menufont)
@@ -234,7 +241,9 @@ class Editor(tkinter.Toplevel):
 			print(e.__str__())
 			print('\nCould not save configuration')
 		else:
-			data = dict()	
+			data = dict()
+			data['fgcolor'] = self.contents.cget('foreground')
+			data['bgcolor'] = self.contents.cget('background')
 			data['font'] = self.font.config()
 			data['menufont'] = self.menufont.config()
 			data['scrollbar_width'] = self.scrollbar_width
@@ -250,9 +259,10 @@ class Editor(tkinter.Toplevel):
 		string_representation = fileobject.read()
 		data = json.loads(string_representation)
 
+		self.fgcolor = data['fgcolor']
+		self.bgcolor = data['bgcolor']
 		self.font.config(**data['font'])
 		self.menufont.config(**data['menufont'])
-		
 		self.scrollbar_width 	= data['scrollbar_width']
 		self.elementborderwidth	= data['elementborderwidth']
 		self.contents.vbar.config(width=self.scrollbar_width)
@@ -296,7 +306,12 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def font_choose(self, event=None):		
-		self.choose = font_chooser.Fontchooser(self.top, [self.font, self.menufont])				
+		self.choose = changefont.FontChooser([self.font, self.menufont])				
+		return 'break'
+		
+		
+	def color_choose(self, event=None):		
+		self.color = changecolor.ColorChooser([self.contents])				
 		return 'break'
 		
 
@@ -1087,6 +1102,7 @@ class Editor(tkinter.Toplevel):
 ################ Replace End
 	
 	def quit_me(self):
+		self.save()
 		self.save_config()
 		self.quit()
 		self.destroy()

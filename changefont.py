@@ -1,13 +1,14 @@
 import tkinter
 
 
-class Fontchooser(tkinter.Toplevel):
+class FontChooser(tkinter.Toplevel):
 		
-	def __init__(self, root, fontlist):
+	def __init__(self, fontlist):
 		'''	root is tkinter.Tk instance
 			fontlist is list of tkinter.font.Font instances
 		'''
-		super().__init__(root)
+		self.root = tkinter.Tk().withdraw()
+		super().__init__(self.root)
 		self.fonts = fontlist
 		self.badfonts = [
 					'Standard Symbols PS',
