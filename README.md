@@ -1,24 +1,22 @@
 # simple-editor
 GUI-editor for Python development. 
 Tested to work with Debian Buster and Bullseye. 
-It is meant to be used from Python console rather than standalone.
-* Update: Added possibility to change colors.
 
 # Featuring
-* Indent - Unindent
-* Comment - Uncomment
-* Search - Replace
 * Auto-indent
-* Run current file
-* Click to open errors
 * Font Chooser
 * Color Chooser
+* Run current file
+* Search - Replace
+* Indent - Unindent
+* Comment - Uncomment
+* Click to open errors
 * Persistent configuration
 
 # Lacking and not going to implement
-* Autocompletion
+* Auto-completion
 * Hinting
-* Linenumbering
+* Line numbering
 * Syntax highlighting
 
 # Installing and running

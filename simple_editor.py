@@ -1,4 +1,8 @@
-#TODO: 'tabbed' editing with optionmenu
+#TODO: Check copy paste indentation problem,
+# check shortcuts###############
+# day night profiles, walk profiles == shortcut
+# add profile and set as current == shortcut,
+# 'tabbed' editing with optionmenu
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
@@ -573,7 +577,7 @@ class Editor(tkinter.Toplevel):
 				d.filesbar.configure(elementborderwidth=self.elementborderwidth)
 				d.dirsbar.configure(elementborderwidth=self.elementborderwidth)
 				
-				self.filename = d.go('.')
+				self.filename = d.go('.', pattern='*.py')
 				
 				asked = True
 				if self.filename == None:  #pressed close or cancel in filedialog
@@ -631,17 +635,31 @@ class Editor(tkinter.Toplevel):
 		# otherwise there will be extra newline at the end of file
 		# so we remove the last symbol which is newline
 		
-		fpath_in_entry = self.entry.get()
-		try:
-			f = open(fpath_in_entry, 'w', encoding='utf-8')
-		except OSError as e:
-			print(e.__str__())
-			print('\n Could save file %s' % fpath_in_entry)
+		fpath_in_entry = self.entry.get().strip()
+		
+		# Check for a sane filepath is quite a work if we want 
+		# 'whitelist' -type filtering. You can easily find solution for that
+		# in Stack Overflow, but solutions are quite complex.
+		# I use only simple 'blacklist' -type filtering for some obvious cases:
+		
+		# Is path str AND is it not empty AND does it contain '.py' 
+		# AND is first char before '.py' alpha-numeric.
+		
+		if not isinstance(fpath_in_entry, str) or fpath_in_entry.isspace() or '.py' not in fpath_in_entry or not fpath_in_entry[fpath_in_entry.index('.py')-1].isalnum():
+			print('Give a valid filename')
+			self.bell()
+			self.btn_save.flash()
 		else:
-			f.write(tmp)
-			f.close()
-			self.filename = fpath_in_entry
-			self.flag_init = False
+			try:
+				f = open(fpath_in_entry, 'w', encoding='utf-8')
+			except OSError as e:
+				print(e.__str__())
+				print('\n Could not save file %s' % fpath_in_entry)
+			else:
+				f.write(tmp)
+				f.close()
+				self.filename = fpath_in_entry
+				self.flag_init = False
 
 
 	def raise_popup(self, event=None):

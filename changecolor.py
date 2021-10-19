@@ -5,7 +5,6 @@ class ColorChooser(tkinter.Toplevel):
 	def __init__(self, widlist):
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root)
-		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		self.widgetlist = list()
 		
 		for widget in widlist:
@@ -14,10 +13,10 @@ class ColorChooser(tkinter.Toplevel):
 		self.colorbg = self.widgetlist[0].cget('background')
 		self.colorfg = self.widgetlist[0].cget('foreground')
 		
-		self.btnfg = tkinter.Button(self, text='Change foreground color', font=('Noto Mono',16), command=lambda args=['fg']: self.chcolor(args))
+		self.btnfg = tkinter.Button(self, text='Change foreground color', font=('TkDefaultFont', 16), command=lambda args=['fg']: self.chcolor(args))
 		self.btnfg.pack(padx=10, pady=10)
 		
-		self.btnbg = tkinter.Button(self, text='Change background color', font=('Noto Mono',16), command=lambda args=['bg']: self.chcolor(args))
+		self.btnbg = tkinter.Button(self, text='Change background color', font=('TkDefaultFont', 16), command=lambda args=['bg']: self.chcolor(args))
 		self.btnbg.pack(padx=10, pady=10)
 		
 		
@@ -36,10 +35,4 @@ class ColorChooser(tkinter.Toplevel):
 			
 			for widget in self.widgetlist:
 				widget.config(fg=self.colorfg)
-	
-		
-	def quit_me(self):
-		self.quit()
-		self.destroy()
-		
 

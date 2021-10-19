@@ -4,8 +4,7 @@ import tkinter
 class FontChooser(tkinter.Toplevel):
 		
 	def __init__(self, fontlist):
-		'''	root is tkinter.Tk instance
-			fontlist is list of tkinter.font.Font instances
+		'''	fontlist is list of tkinter.font.Font instances
 		'''
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root)
