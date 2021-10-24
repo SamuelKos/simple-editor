@@ -1,8 +1,11 @@
-#TODO: Check copy paste indentation problem,
-# check shortcuts###############
-# day night profiles, walk profiles == shortcut
-# add profile and set as current == shortcut,
-# 'tabbed' editing with optionmenu
+#TODO:
+# 
+# add day night optionmenu to colorchooser
+# show i/num in title in normal state
+# show next: see lines after match
+# check copy paste indentation problem
+# check shortcuts
+
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
@@ -74,9 +77,17 @@ class Editor(tkinter.Toplevel):
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		self.titletext = 'Simple Editor'
 		self.title(self.titletext)
-		self.fgcolor = '#D3D7CF'
-		self.bgcolor = '#000000'
+		self.flag_newtab = False
+		self.openfiles = dict()
 		
+		self.bgdaycolor = r'#D3D7CF'
+		self.fgdaycolor = r'#000000'
+		self.bgnightcolor = r'#000000'
+		self.fgnightcolor = r'#D3D7CF'
+		self.fgcolor = self.fgdaycolor
+		self.bgcolor = self.bgdaycolor
+		self.curcolor = 'day'
+
 		self.replace_overlap_index = None
 		self.search_idx = ('1.0', '1.0')
 		self.search_matches = 0
@@ -97,6 +108,14 @@ class Editor(tkinter.Toplevel):
 		
 		# Layout Begin:
 		####################################################
+		# IMPORTANT if binding to 'root': 
+		# https://stackoverflow.com/questions/54185434/python-tkinter-override-default-ctrl-h-binding
+		# Found this when wondering what is happening when ctrl-t was used.
+		# It did the callback but also something unwanted..
+		# https://unix.stackexchange.com/questions/330414/intended-use-of-ctrlt-in-bash
+		# https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/binding-levels.html
+		# I use this with ctrl-t after self.contents is packed below
+		 
 		self.bind("<Control-minus>", self.decrease_scrollbar_width)
 		self.bind("<Control-plus>", self.increase_scrollbar_width)
 		self.bind("<Escape>", lambda e: self.iconify())
@@ -108,6 +127,9 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-W>", self.save_config)
 		self.bind("<Control-p>", self.font_choose)
 		self.bind("<Control-s>", self.color_choose)
+		self.bind("<Control-n>", self.new_tab)
+		self.bind("<Control-d>", self.del_tab)
+		self.bind("<Control-w>", self.walk_files)
 		
 		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
 		
@@ -124,6 +146,10 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-Z>", self.redo_override)
 		
 		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
+		
+		bindtags = self.contents.bindtags()
+		self.contents.bindtags((bindtags[2], bindtags[0], bindtags[1], bindtags[3]))
+		self.bind("<Control-t>", self.toggle_color)
 		
 		self.popup_whohasfocus = None
 		self.popup = tkinter.Menu(self, tearoff=0, bd=0, activeborderwidth=0)
@@ -186,7 +212,15 @@ class Editor(tkinter.Toplevel):
 		self.contents.vbar.config(width=self.scrollbar_width)
 		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
 		self.filename = None
-		self.local = None
+		
+		self.tab_width = self.font.measure(4*' ') #############################
+		self.contents.config(font=self.font, foreground=self.fgcolor,
+			background=self.bgcolor, insertbackground=self.fgcolor, 
+			tabs=(self.tab_width, ))
+		self.entry.config(font=self.menufont)
+		self.btn_open.config(font=self.menufont)
+		self.btn_save.config(font=self.menufont)
+		self.popup.config(font=self.menufont)
 		
 		# Try to apply saved configurations:
 		try:
@@ -204,38 +238,161 @@ class Editor(tkinter.Toplevel):
 		if self.randfont == True:
 			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
 		
-		# Apply fonts and colors to widgets
-		self.tab_width = self.font.measure(4*' ') #############################
-		self.contents.config(font=self.font, foreground=self.fgcolor,
-			background=self.bgcolor, insertbackground=self.fgcolor, 
-			tabs=(self.tab_width, ))
-		self.entry.config(font=self.menufont)
-		self.btn_open.config(font=self.menufont)
-		self.btn_save.config(font=self.menufont)
-		self.popup.config(font=self.menufont)
-		# Set Font End ##################################################
-		
-		if self.local:
-			try:
-				f = open(self.local)
-			except OSError as e:
-				print(e.__str__())
-				self.entry.delete(0, tkinter.END)
-				self.filename = None
-			else:
-				self.contents.insert(tkinter.INSERT, f.read())
-				f.close()
-				self.filename = self.local
-				self.entry.insert(0, self.filename)
-				self.flag_init = False
-					
-		if self.filename == None:
+		if self.filename == None: 
 			self.flag_init = True
+			self.flag_newtab = True
+		else:
+			self.flag_init = False
+
 		############################# init End ######################
 		
 
 	def do_nothing(self, event=None):
 		pass
+		
+		
+	def del_tab(self, event=None):
+		if self.flag_newtab == True or self.filename == None or len(self.openfiles) == 0:
+			self.bell()
+			return 'break'
+		else:
+			self.save()
+			self.contents.delete('1.0', tkinter.END)
+			self.entry.delete(0, tkinter.END)
+			s = sorted(self.openfiles.keys())
+			
+			for i in range(len(s)):
+				if self.openfiles[s[i]][0] == 'active': break
+			
+			self.openfiles.pop(self.filename)
+			
+			if len(s) == 1:
+				self.filename = None
+				self.flag_init = True
+				self.flag_newtab = True
+
+				return 'break'
+				
+			if len(s) > 1:
+				i -= 1
+				self.filename = s[i]
+			
+				for key in self.openfiles: self.openfiles[key][0] = 'inactive'
+				self.openfiles[self.filename][0] = 'active'
+				
+				try:
+					f = open(self.filename)
+				except OSError as e:
+					print(e.__str__())
+					self.openfiles.pop(self.filename)
+					
+					for key in self.openfiles:
+						self.openfiles[key][0] = 'inactive'
+					
+					self.filename = None
+					self.flag_init = True
+					self.flag_newtab = True
+					
+					return 'break'
+					
+				else:
+					self.contents.insert(tkinter.INSERT, f.read())
+					f.close()
+					self.entry.insert(0, self.filename)
+					
+					try:
+						line = self.openfiles[self.filename][1]
+						self.contents.focus_set()
+						self.contents.see(line)
+						self.contents.mark_set('insert', line)
+					except tkinter.TclError:
+						self.openfiles[self.filename][1] = '1.0'
+					
+					return 'break'
+		
+		
+	def walk_files(self, event=None):
+		if len(self.openfiles) < 2 or not self.filename:
+			self.bell()
+			
+			return 'break'
+			
+		self.save()
+		self.contents.delete('1.0', tkinter.END)
+		self.entry.delete(0, tkinter.END)
+		s = sorted(self.openfiles.keys())
+		
+		for i in range(len(s)):
+			if self.openfiles[s[i]][0] == 'active': break
+		
+		if i == len(s) - 1:
+			i = 0
+		else:
+			i += 1
+			
+		self.filename = s[i]
+		
+		for key in self.openfiles: self.openfiles[key][0] = 'inactive'
+		self.openfiles[self.filename][0] = 'active'
+	
+		try:
+			f = open(self.filename)
+		except OSError as e:
+			print(e.__str__())
+			self.filename = None
+			self.flag_init = True
+		else:
+			self.contents.insert(tkinter.INSERT, f.read())
+			f.close()
+			self.entry.insert(0, self.filename)
+			
+			try:
+				line = self.openfiles[self.filename][1]
+				self.contents.focus_set()
+				self.contents.see(line)
+				self.contents.mark_set('insert', line)
+			except tkinter.TclError:
+				self.openfiles[self.filename][1] = '1.0'
+				
+		
+	def new_tab(self, event=None):
+		try:
+			pos = self.contents.index(tkinter.INSERT)
+		except tkinter.TclError:
+			pos = '1.0'
+			
+		self.save()
+		
+		for key in self.openfiles:
+			self.openfiles[key][0] = 'inactive'
+		
+		if self.filename:
+			self.openfiles[self.filename][1] = pos
+						
+		self.contents.delete('1.0', tkinter.END)
+		self.entry.delete(0, tkinter.END)
+		self.filename = None
+		self.flag_init = True
+		self.flag_newtab = True
+		
+		
+	def toggle_color(self, event=None):
+		if self.curcolor == 'day':
+			self.fgcolor = self.fgnightcolor
+			self.bgcolor = self.bgnightcolor
+		else:
+			self.fgcolor = self.fgdaycolor
+			self.bgcolor = self.bgdaycolor
+			
+		if self.curcolor == 'day':
+			self.curcolor = 'night'
+		else:
+			self.curcolor = 'day'
+			
+		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
+			insertbackground=self.fgcolor)
+			
+		return 'break'
 		
 
 	def save_config(self, event=None):
@@ -245,35 +402,106 @@ class Editor(tkinter.Toplevel):
 			print(e.__str__())
 			print('\nCould not save configuration')
 		else:
-			data = dict()
-			data['fgcolor'] = self.contents.cget('foreground')
-			data['bgcolor'] = self.contents.cget('background')
-			data['font'] = self.font.config()
-			data['menufont'] = self.menufont.config()
-			data['scrollbar_width'] = self.scrollbar_width
-			data['elementborderwidth'] = self.elementborderwidth
-			data['self.local'] = self.filename
-	
+			data = self.get_config()
 			string_representation = json.dumps(data)
 			f.write(string_representation)
 			f.close()
 
 			
+	def apply_config(self):
+		self.tab_width = self.font.measure(4*' ') #############################
+		self.contents.config(font=self.font, foreground=self.fgcolor,
+			background=self.bgcolor, insertbackground=self.fgcolor, 
+			tabs=(self.tab_width, ))
+		self.entry.config(font=self.menufont)
+		self.btn_open.config(font=self.menufont)
+		self.btn_save.config(font=self.menufont)
+		self.popup.config(font=self.menufont)
+		
+		self.entry.delete(0, tkinter.END)
+		self.contents.delete('1.0', tkinter.END)
+		
+		if self.filename:
+			try:
+				f = open(self.filename)
+			except OSError as e:
+				print(e.__str__())
+				self.filename = None
+			else:
+				self.contents.insert(tkinter.INSERT, f.read())
+				f.close()
+				self.entry.insert(0, self.filename)
+				
+				try:
+					line = self.openfiles[self.filename][1]
+					self.contents.focus_set()
+					self.contents.see(line)
+					self.contents.mark_set('insert', line)
+				except tkinter.TclError:
+					self.openfiles[self.filename][1] = '1.0'
+				
+				
 	def load_config(self, fileobject):
 		string_representation = fileobject.read()
 		data = json.loads(string_representation)
+		self.set_config(data)
+		self.apply_config()
+			
 
-		self.fgcolor = data['fgcolor']
-		self.bgcolor = data['bgcolor']
-		self.font.config(**data['font'])
-		self.menufont.config(**data['menufont'])
-		self.scrollbar_width 	= data['scrollbar_width']
-		self.elementborderwidth	= data['elementborderwidth']
+	def get_config(self):
+		dictionary = dict()
+		dictionary['fgcolor'] = self.contents.cget('foreground')
+		dictionary['bgcolor'] = self.contents.cget('background')
+		dictionary['fgdaycolor'] = self.fgdaycolor
+		dictionary['bgdaycolor'] = self.bgdaycolor
+		dictionary['fgnightcolor'] = self.fgnightcolor
+		dictionary['bgnightcolor'] = self.bgnightcolor
+		dictionary['curcolor'] = self.curcolor
+		dictionary['font'] = self.font.config()
+		dictionary['menufont'] = self.menufont.config()
+		dictionary['scrollbar_width'] = self.scrollbar_width
+		dictionary['elementborderwidth'] = self.elementborderwidth
+		dictionary['filename'] = self.filename
+		
+		try:
+			pos = self.contents.index(tkinter.INSERT)
+		except tkinter.TclError:
+			pos = '1.0'
+		
+		for key in self.openfiles: self.openfiles[key][0] = 'inactive'
+		
+		if self.filename != None:
+			self.openfiles[self.filename][0] = 'active'
+			self.openfiles[self.filename][1] = pos
+
+		dictionary['openfiles'] = self.openfiles
+		
+		return dictionary
+			
+			
+	def set_config(self, dictionary):
+		self.fgnightcolor = dictionary['fgnightcolor']
+		self.bgnightcolor = dictionary['bgnightcolor']
+		self.fgdaycolor = dictionary['fgdaycolor'] 
+		self.bgdaycolor = dictionary['bgdaycolor'] 
+		self.fgcolor = dictionary['fgcolor']
+		self.bgcolor = dictionary['bgcolor']
+		self.curcolor = dictionary['curcolor']
+		
+		self.font.config(**dictionary['font'])
+		self.menufont.config(**dictionary['menufont'])
+		self.scrollbar_width 	= dictionary['scrollbar_width']
+		self.elementborderwidth	= dictionary['elementborderwidth']
 		self.contents.vbar.config(width=self.scrollbar_width)
 		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
-			
-		self.local = data['self.local']
 
+		self.openfiles = dictionary['openfiles']
+		
+		for key in self.openfiles:
+			if self.openfiles[key][0] == 'active':
+				self.filename = key
+				break
+				
 		
 	def increase_scrollbar_width(self, event=None):
 		'''	Change width of scrollbar of self.contents and of 
@@ -519,7 +747,7 @@ class Editor(tkinter.Toplevel):
 		self.popup_whohasfocus.event_generate('<<Paste>>')
 
 
-	def load(self, event=None, no_such_file=False, search=False):
+	def load(self, event=None, no_such_file=False):
 		tmp = self.entry.get()
 		save = self.filename
 		asked = False
@@ -549,6 +777,31 @@ class Editor(tkinter.Toplevel):
 				f.close()
 				self.entry.insert(0, self.filename)
 				self.flag_init = False
+				
+				if self.flag_newtab == True:
+					for key in self.openfiles: self.openfiles[key][0] = 'inactive'
+					
+					try:
+						self.openfiles[self.filename][0] = 'active'
+					except KeyError:
+						print('load1')
+						self.openfiles[self.filename] = list()
+						self.openfiles[self.filename].append('active')
+						self.openfiles[self.filename].append('1.0')
+						
+					self.flag_newtab = False
+				else:
+					for key in self.openfiles:
+						if self.openfiles[key][0] == 'active':
+							self.openfiles.pop(key)
+							break
+					try:
+						self.openfiles[self.filename][0] = 'active'
+					except KeyError:
+						print('load2')
+						self.openfiles[self.filename] = list()
+						self.openfiles[self.filename].append('active')
+						self.openfiles[self.filename].append('1.0')
 		
 			################################### End of Check
 			
@@ -613,15 +866,38 @@ class Editor(tkinter.Toplevel):
 						self.load(no_such_file=True)
 				else:
 					self.contents.delete('1.0', tkinter.END)
-	
-					for line in f.readlines():
-						self.contents.insert(tkinter.INSERT, line)
-	
+					self.contents.insert(tkinter.INSERT, f.read())
 					f.close()
 					self.entry.delete(0, tkinter.END)
 					self.entry.insert(0, self.filename)
 					self.contents.edit_reset()
 					self.flag_init = False
+					
+					if self.flag_newtab == True:
+						for key in self.openfiles:
+							self.openfiles[key][0] = 'inactive'
+							
+						try:
+							self.openfiles[self.filename][0] = 'active'
+						except KeyError:
+							print('load3')
+							self.openfiles[self.filename] = list()
+							self.openfiles[self.filename].append('active')
+							self.openfiles[self.filename].append('1.0')
+						
+						self.flag_newtab = False
+					else:
+						for key in self.openfiles:
+							if self.openfiles[key][0] == 'active': break
+						self.openfiles.pop(key)
+						
+						try:
+							self.openfiles[self.filename][0] = 'active'
+						except KeyError:
+							print('load4')
+							self.openfiles[self.filename] = list()
+							self.openfiles[self.filename].append('active')
+							self.openfiles[self.filename].append('1.0')
 				
 	
 	def save(self):
@@ -636,6 +912,9 @@ class Editor(tkinter.Toplevel):
 		# so we remove the last symbol which is newline
 		
 		fpath_in_entry = self.entry.get().strip()
+		
+		if '/' not in fpath_in_entry:
+				fpath_in_entry = os.path.abspath('.') + '/' + fpath_in_entry
 		
 		# Check for a sane filepath is quite a work if we want 
 		# 'whitelist' -type filtering. You can easily find solution for that
@@ -659,6 +938,38 @@ class Editor(tkinter.Toplevel):
 				f.write(tmp)
 				f.close()
 				self.filename = fpath_in_entry
+		
+				try:
+					pos = self.contents.index(tkinter.INSERT)
+				except tkinter.TclError:
+					pos = '1.0'
+				
+				if self.flag_newtab == True:
+						for key in self.openfiles:
+							self.openfiles[key][0] = 'inactive'
+								
+						try:
+							self.openfiles[self.filename][0] = 'active'
+						except KeyError:
+							print('save1')
+							self.openfiles[self.filename] = list()
+							self.openfiles[self.filename].append('active')
+							self.openfiles[self.filename].append(pos)
+						
+						self.flag_newtab = False
+				else:
+					for key in self.openfiles:
+						if self.openfiles[key][0] == 'active': break
+					self.openfiles.pop(key)
+					
+					try:
+						self.openfiles[self.filename][0] = 'active'
+					except KeyError:
+						print('save2')
+						self.openfiles[self.filename] = list()
+						self.openfiles[self.filename].append('active')
+						self.openfiles[self.filename].append(pos)
+						
 				self.flag_init = False
 
 
@@ -977,6 +1288,8 @@ class Editor(tkinter.Toplevel):
 				self.title('Replace %s matches with:' % str(self.search_matches))
 				self.entry.bind("<Return>", self.start_replace)
 				self.entry.focus_set()
+		else:
+			self.bell()
 				
 				
 	def stop_search(self, event=None):
@@ -1124,11 +1437,5 @@ class Editor(tkinter.Toplevel):
 		self.save_config()
 		self.quit()
 		self.destroy()
-
-
-if __name__ == '__main__':
-	root = tkinter.Tk().withdraw()
-	e = Editor(root)
-	e.mainloop()
 
 
