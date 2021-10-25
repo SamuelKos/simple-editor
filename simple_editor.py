@@ -1,10 +1,13 @@
 #TODO:
-# 
+
 # add day night optionmenu to colorchooser
+# rewrite load with pen and paper
 # show i/num in title in normal state
-# show next: see lines after match
-# check copy paste indentation problem
+# show next/prev: see some lines before/after match
+# open file: same as previous
+# can't walk from newtab, must save it first
 # check shortcuts
+# check copy paste indentation problem
 
 # from standard library
 import tkinter.scrolledtext
@@ -57,7 +60,7 @@ HELPTEXT = '''		Keyboard shortcuts:
 		
 		Ctrl-p  Font setting
 		Ctrl-s  Color setting
-		Ctrl-W	Save current settings
+		Ctrl-t  Toggle color setting
 		
 		Ctrl-plus 	Increase scrollbar-width
 		Ctrl-minus	Decrease scrollbar-width
@@ -114,7 +117,8 @@ class Editor(tkinter.Toplevel):
 		# It did the callback but also something unwanted..
 		# https://unix.stackexchange.com/questions/330414/intended-use-of-ctrlt-in-bash
 		# https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/binding-levels.html
-		# I use this with ctrl-t after self.contents is packed below
+		# I use this with ctrl-t after self.contents is packed below.
+		# But with ctrl-U this did not work, so changed to ctrl-X
 		 
 		self.bind("<Control-minus>", self.decrease_scrollbar_width)
 		self.bind("<Control-plus>", self.increase_scrollbar_width)
@@ -124,7 +128,6 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-g>", self.gotoline)
 		self.bind("<Control-r>", self.replace)
 		self.bind("<Control-f>", self.search)
-		self.bind("<Control-W>", self.save_config)
 		self.bind("<Control-p>", self.font_choose)
 		self.bind("<Control-s>", self.color_choose)
 		self.bind("<Control-n>", self.new_tab)
@@ -138,7 +141,7 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.bind("<Return>", self.return_override)
 		self.contents.bind("<Control-C>", self.comment)
-		self.contents.bind("<Control-U>", self.uncomment)
+		self.contents.bind("<Control-X>", self.uncomment)
 		self.contents.bind("<Control-greater>", self.indent)
 		self.contents.bind("<Control-less>", self.unindent)
 		self.contents.bind("<Control-a>", self.select_all)
@@ -238,23 +241,51 @@ class Editor(tkinter.Toplevel):
 		if self.randfont == True:
 			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
 		
-		if self.filename == None: 
-			self.flag_init = True
+		if self.filename == None:
 			self.flag_newtab = True
-		else:
-			self.flag_init = False
 
 		############################# init End ######################
 		
 
 	def do_nothing(self, event=None):
-		pass
+		self.bell()
+		return 'break'
 		
 		
 	def del_tab(self, event=None):
-		if self.flag_newtab == True or self.filename == None or len(self.openfiles) == 0:
+		if len(self.openfiles) == 0:
 			self.bell()
 			return 'break'
+		
+		if self.flag_newtab == True:
+			for key in self.openfiles:
+				if self.openfiles[key][0] == 'active':
+					self.filename = key
+					break
+
+			try:
+				f = open(self.filename, encoding='utf-8')
+			except OSError as e:
+				print(e.__str__())
+				print('\n Could not open file %s' % self.filename)
+			else:
+				self.contents.delete('1.0', tkinter.END)
+				self.contents.insert(tkinter.INSERT, f.read())
+				f.close()
+				self.entry.delete(0, tkinter.END)
+				self.entry.insert(0, self.filename)
+				self.flag_newtab = False
+				self.contents.edit_reset()
+				try:
+					line = self.openfiles[self.filename][1]
+					self.contents.focus_set()
+					self.contents.see(line)
+					self.contents.mark_set('insert', line)
+				except tkinter.TclError:
+					self.openfiles[self.filename][1] = '1.0'
+				
+				return 'break'
+				
 		else:
 			self.save()
 			self.contents.delete('1.0', tkinter.END)
@@ -268,7 +299,6 @@ class Editor(tkinter.Toplevel):
 			
 			if len(s) == 1:
 				self.filename = None
-				self.flag_init = True
 				self.flag_newtab = True
 
 				return 'break'
@@ -290,7 +320,6 @@ class Editor(tkinter.Toplevel):
 						self.openfiles[key][0] = 'inactive'
 					
 					self.filename = None
-					self.flag_init = True
 					self.flag_newtab = True
 					
 					return 'break'
@@ -312,68 +341,67 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def walk_files(self, event=None):
-		if len(self.openfiles) < 2 or not self.filename:
-			self.bell()
+		self.save()
+		f = False
+		
+		while not f:
+			if len(self.openfiles) < 2:
+				self.bell()
+				return 'break'
 			
+			s = sorted(self.openfiles.keys())
+			
+			for i in range(len(s)):
+				if self.openfiles[s[i]][0] == 'active':
+					break
+			
+			if i == len(s) - 1:
+				i = 0
+			else:
+				i += 1
+				
+			self.filename = s[i]
+			try:
+				f = open(self.filename)
+			except OSError as e:
+				print(e.__str__())
+				self.openfiles.pop(self.filename)
+				self.filename = None
+				f = False
+		
+		self.contents.delete('1.0', tkinter.END)
+		self.entry.delete(0, tkinter.END)
+		
+		for key in self.openfiles: self.openfiles[key][0] = 'inactive'
+		self.openfiles[self.filename][0] = 'active'
+		
+		self.contents.insert(tkinter.INSERT, f.read())
+		f.close()
+		self.entry.insert(0, self.filename)
+		
+		try:
+			line = self.openfiles[self.filename][1]
+			self.contents.focus_set()
+			self.contents.see(line)
+			self.contents.mark_set('insert', line)
+		except tkinter.TclError:
+			self.openfiles[self.filename][1] = '1.0'
+				
+		return 'break'
+				
+		
+	def new_tab(self, event=None):
+		if self.flag_newtab:
+			self.bell()
 			return 'break'
 			
 		self.save()
 		self.contents.delete('1.0', tkinter.END)
 		self.entry.delete(0, tkinter.END)
-		s = sorted(self.openfiles.keys())
-		
-		for i in range(len(s)):
-			if self.openfiles[s[i]][0] == 'active': break
-		
-		if i == len(s) - 1:
-			i = 0
-		else:
-			i += 1
-			
-		self.filename = s[i]
-		
-		for key in self.openfiles: self.openfiles[key][0] = 'inactive'
-		self.openfiles[self.filename][0] = 'active'
-	
-		try:
-			f = open(self.filename)
-		except OSError as e:
-			print(e.__str__())
-			self.filename = None
-			self.flag_init = True
-		else:
-			self.contents.insert(tkinter.INSERT, f.read())
-			f.close()
-			self.entry.insert(0, self.filename)
-			
-			try:
-				line = self.openfiles[self.filename][1]
-				self.contents.focus_set()
-				self.contents.see(line)
-				self.contents.mark_set('insert', line)
-			except tkinter.TclError:
-				self.openfiles[self.filename][1] = '1.0'
-				
-		
-	def new_tab(self, event=None):
-		try:
-			pos = self.contents.index(tkinter.INSERT)
-		except tkinter.TclError:
-			pos = '1.0'
-			
-		self.save()
-		
-		for key in self.openfiles:
-			self.openfiles[key][0] = 'inactive'
-		
-		if self.filename:
-			self.openfiles[self.filename][1] = pos
-						
-		self.contents.delete('1.0', tkinter.END)
-		self.entry.delete(0, tkinter.END)
 		self.filename = None
-		self.flag_init = True
 		self.flag_newtab = True
+		
+		return 'break'
 		
 		
 	def toggle_color(self, event=None):
@@ -420,25 +448,48 @@ class Editor(tkinter.Toplevel):
 		
 		self.entry.delete(0, tkinter.END)
 		self.contents.delete('1.0', tkinter.END)
+		start = True
 		
-		if self.filename:
+		f = False
+		while not f:
+			if len(self.openfiles) == 0:
+				break
+				
+			if not start:
+				s = sorted(self.openfiles.keys())
+				
+				for i in range(len(s)):
+					if self.openfiles[s[i]][0] == 'active':
+						break
+				
+				if i == len(s) - 1:
+					i = 0
+				else:
+					i += 1
+					
+				self.filename = s[i]
+				
 			try:
+				start = False
 				f = open(self.filename)
 			except OSError as e:
 				print(e.__str__())
+				self.openfiles.pop(self.filename)
 				self.filename = None
-			else:
-				self.contents.insert(tkinter.INSERT, f.read())
-				f.close()
-				self.entry.insert(0, self.filename)
+				f = False
+
+
+		self.contents.insert(tkinter.INSERT, f.read())
+		f.close()
+		self.entry.insert(0, self.filename)
 				
-				try:
-					line = self.openfiles[self.filename][1]
-					self.contents.focus_set()
-					self.contents.see(line)
-					self.contents.mark_set('insert', line)
-				except tkinter.TclError:
-					self.openfiles[self.filename][1] = '1.0'
+		try:
+			line = self.openfiles[self.filename][1]
+			self.contents.focus_set()
+			self.contents.see(line)
+			self.contents.mark_set('insert', line)
+		except tkinter.TclError:
+			self.openfiles[self.filename][1] = '1.0'
 				
 				
 	def load_config(self, fileobject):
@@ -621,7 +672,10 @@ class Editor(tkinter.Toplevel):
 			errors in your program, you should use logging (in except-block)
 			if you are not 100% sure about your code in except-block.
 		'''
-		
+		if self.flag_newtab:
+			self.bell()
+			return
+			
 		res =  subprocess.run(['python', self.filename], text=True, capture_output=True)
 		print(res.stdout)
 		
@@ -748,14 +802,17 @@ class Editor(tkinter.Toplevel):
 
 
 	def load(self, event=None, no_such_file=False):
-		tmp = self.entry.get()
+		tmp = self.entry.get().strip()
 		save = self.filename
 		asked = False
 		
 		# Check if user entered manually filepath (in entry)
 		# before pressing Open, get filepath and open it right away:
 		
-		if self.flag_init and tmp != '' and tmp != None:
+		if self.flag_newtab and tmp != '':
+			if not isinstance(tmp, str) or tmp.isspace() or '.py' not in tmp or not tmp[tmp.index('.py')-1].isalnum() or tmp == save:
+				self.bell()
+				return
 			
 			# If trying to open from curdir without full path
 			if '/' not in tmp:
@@ -776,7 +833,6 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, f.read())
 				f.close()
 				self.entry.insert(0, self.filename)
-				self.flag_init = False
 				
 				if self.flag_newtab == True:
 					for key in self.openfiles: self.openfiles[key][0] = 'inactive'
@@ -784,7 +840,6 @@ class Editor(tkinter.Toplevel):
 					try:
 						self.openfiles[self.filename][0] = 'active'
 					except KeyError:
-						print('load1')
 						self.openfiles[self.filename] = list()
 						self.openfiles[self.filename].append('active')
 						self.openfiles[self.filename].append('1.0')
@@ -798,7 +853,6 @@ class Editor(tkinter.Toplevel):
 					try:
 						self.openfiles[self.filename][0] = 'active'
 					except KeyError:
-						print('load2')
 						self.openfiles[self.filename] = list()
 						self.openfiles[self.filename].append('active')
 						self.openfiles[self.filename].append('1.0')
@@ -871,7 +925,6 @@ class Editor(tkinter.Toplevel):
 					self.entry.delete(0, tkinter.END)
 					self.entry.insert(0, self.filename)
 					self.contents.edit_reset()
-					self.flag_init = False
 					
 					if self.flag_newtab == True:
 						for key in self.openfiles:
@@ -880,7 +933,6 @@ class Editor(tkinter.Toplevel):
 						try:
 							self.openfiles[self.filename][0] = 'active'
 						except KeyError:
-							print('load3')
 							self.openfiles[self.filename] = list()
 							self.openfiles[self.filename].append('active')
 							self.openfiles[self.filename].append('1.0')
@@ -894,7 +946,6 @@ class Editor(tkinter.Toplevel):
 						try:
 							self.openfiles[self.filename][0] = 'active'
 						except KeyError:
-							print('load4')
 							self.openfiles[self.filename] = list()
 							self.openfiles[self.filename].append('active')
 							self.openfiles[self.filename].append('1.0')
@@ -906,7 +957,7 @@ class Editor(tkinter.Toplevel):
 		# Check indent (tabify):
 		tmp[:] = [self.tabify(line) for line in tmp]
 
-		tmp = ''.join(tmp)[:-1]
+		tmp = ''.join(tmp)[:-1] ################################################
 		# explanation of: [:-1]
 		# otherwise there will be extra newline at the end of file
 		# so we remove the last symbol which is newline
@@ -930,49 +981,94 @@ class Editor(tkinter.Toplevel):
 			self.btn_save.flash()
 		else:
 			try:
-				f = open(fpath_in_entry, 'w', encoding='utf-8')
-			except OSError as e:
-				print(e.__str__())
-				print('\n Could not save file %s' % fpath_in_entry)
-			else:
-				f.write(tmp)
-				f.close()
-				self.filename = fpath_in_entry
-		
-				try:
-					pos = self.contents.index(tkinter.INSERT)
-				except tkinter.TclError:
-					pos = '1.0'
-				
-				if self.flag_newtab == True:
-						for key in self.openfiles:
-							self.openfiles[key][0] = 'inactive'
-								
-						try:
-							self.openfiles[self.filename][0] = 'active'
-						except KeyError:
-							print('save1')
-							self.openfiles[self.filename] = list()
-							self.openfiles[self.filename].append('active')
-							self.openfiles[self.filename].append(pos)
-						
-						self.flag_newtab = False
+				pos = self.contents.index(tkinter.INSERT)
+			except tkinter.TclError:
+				pos = '1.0'
+			
+			if self.flag_newtab != True:
+				# Saving self.filename in current tab:
+				if fpath_in_entry == self.filename:
+					self.openfiles[self.filename][0] = 'active'
+					self.openfiles[self.filename][1] = pos
+
+					try:
+						f = open(self.filename, 'w', encoding='utf-8')
+					except OSError as e:
+						print(e.__str__())
+						print('\n Could not save file %s' % self.filename)
+					else:
+						f.write(tmp)
+						f.close()
 				else:
-					for key in self.openfiles:
-						if self.openfiles[key][0] == 'active': break
-					self.openfiles.pop(key)
+					# Creating a new file in current tab with same content as self.filename.
+					# Check if trying to rewrite already opened file:
+					if fpath_in_entry in self.openfiles.keys():
+						self.bell()
+						return
+						
+					# Save old file first:
+					try:
+						f = open(self.filename, 'w', encoding='utf-8')
+					except OSError as e:
+						print(e.__str__())
+						print('\n Could not save file %s' % self.filename)
+					else:
+						f.write(tmp)
+						f.close()
+						
+					# Remove old filename from openfiles
+					self.openfiles.pop(self.filename)
+					
+					# Then save the new file:
+					self.filename = fpath_in_entry
 					
 					try:
 						self.openfiles[self.filename][0] = 'active'
+						self.openfiles[self.filename][1] = pos
 					except KeyError:
-						print('save2')
+						print('save1')
 						self.openfiles[self.filename] = list()
 						self.openfiles[self.filename].append('active')
 						self.openfiles[self.filename].append(pos)
 						
-				self.flag_init = False
-
-
+					try:
+						f = open(self.filename, 'w', encoding='utf-8')
+					except OSError as e:
+						print(e.__str__())
+						print('\n Could not save file %s' % self.filename)
+					else:
+						f.write(tmp)
+						f.close()
+						
+			else:
+				# Saving in new tab:
+				#
+				# Old file was already saved in new_tab(), but it is still active.
+				# Check if trying to reopen already opened file:
+				if fpath_in_entry in self.openfiles.keys():
+					self.bell()
+					return
+					
+				for key in self.openfiles:
+					self.openfiles[key][0] = 'inactive'
+				
+				# Then save the new file:
+				self.filename = fpath_in_entry
+				self.openfiles[self.filename] = list()
+				self.openfiles[self.filename].append('active')
+				self.openfiles[self.filename].append(pos)
+				
+				try:
+					f = open(self.filename, 'w', encoding='utf-8')
+				except OSError as e:
+					print(e.__str__())
+					print('\n Could not save file %s' % self.filename)
+				else:
+					f.write(tmp)
+					f.close()
+					self.flag_newtab = False
+	
+			
 	def raise_popup(self, event=None):
 		self.popup_whohasfocus = event.widget
 		self.popup.post(event.x_root, event.y_root)
@@ -1015,24 +1111,84 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def stop_help(self, event=None):
-		if not self.flag_init: self.filename = False
 		self.contents.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
-		if not self.flag_init: self.load()
+		self.contents.delete('1.0', tkinter.END)
+		
 		self.bind("<Escape>", lambda e: self.iconify())
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
-		self.contents.focus_set()
+
+		self.bind("<Control-R>", self.replace_all)
+		self.bind("<Control-g>", self.gotoline)
+		self.bind("<Control-r>", self.replace)
+		self.bind("<Control-f>", self.search)
+		self.bind("<Control-p>", self.font_choose)
+		self.bind("<Control-s>", self.color_choose)
+		self.bind("<Control-n>", self.new_tab)
+		self.bind("<Control-d>", self.del_tab)
+		self.bind("<Control-w>", self.walk_files)
+		
+		self.contents.bind("<Control-X>", self.uncomment)
+		self.contents.bind("<Control-C>", self.comment)
+		self.contents.bind("<Control-greater>", self.indent)
+		self.contents.bind("<Control-less>", self.unindent)
+		self.contents.bind("<Control-z>", self.undo_override)
+		self.contents.bind("<Control-Z>", self.redo_override)
+		
+		if self.filename:
+			try:
+				f = open(self.filename)
+			except OSError as e:
+				print(e.__str__())
+				self.openfiles.pop(self.filename)
+				self.entry.delete(0, tkinter.END)
+				
+				for key in self.openfiles:
+					self.openfiles[key][0] = 'inactive'
+				
+				self.filename = None
+				self.flag_newtab = True
+			else:
+				self.contents.insert(tkinter.INSERT, f.read())
+				f.close()
+				try:
+					line = self.openfiles[self.filename][1]
+					self.contents.focus_set()
+					self.contents.see(line)
+					self.contents.mark_set('insert', line)
+				except tkinter.TclError:
+					self.openfiles[self.filename][1] = '1.0'
+		else:
+			self.entry.delete(0, tkinter.END)
 	
 	
 	def help(self, event=None):
-		if not self.flag_init: self.save()
+		if not self.flag_newtab: self.save()
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.helptxt)
 		self.contents.config(state='disabled')
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
+		
 		self.bind("<Button-3>", self.do_nothing)
+		self.bind("<Control-R>", self.do_nothing)
+		self.bind("<Control-g>", self.do_nothing)
+		self.bind("<Control-r>", self.do_nothing)
+		self.bind("<Control-f>", self.do_nothing)
+		self.bind("<Control-p>", self.do_nothing)
+		self.bind("<Control-s>", self.do_nothing)
+		self.bind("<Control-n>", self.do_nothing)
+		self.bind("<Control-d>", self.do_nothing)
+		self.bind("<Control-w>", self.do_nothing)
+		
+		self.contents.bind("<Control-X>", self.do_nothing)
+		self.contents.bind("<Control-C>", self.do_nothing)
+		self.contents.bind("<Control-greater>", self.do_nothing)
+		self.contents.bind("<Control-less>", self.do_nothing)
+		self.contents.bind("<Control-z>", self.do_nothing)
+		self.contents.bind("<Control-Z>", self.do_nothing)
+		
 		self.bind("<Escape>", self.stop_help)
 		
 		
@@ -1099,10 +1255,13 @@ class Editor(tkinter.Toplevel):
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
+			
 			for linenum in range(startline, endline+1):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '##')
+			
 			self.contents.edit_separator()
+		
 		except tkinter.TclError as e:
 			print(e)
 		return "break"
