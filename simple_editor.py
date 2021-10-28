@@ -1,11 +1,12 @@
 #TODO:
 
+# class for tab: name, filepath, active, position  
 # add day night optionmenu to colorchooser
 # rewrite load with pen and paper
-# show i/num in title in normal state
-# show next/prev: see some lines before/after match
-# open file: same as previous
+# shortcut for: (do last search from cur pos, show next, select, exit)
+# 	because current search is not too useful  
 # can't walk from newtab, must save it first
+# show i/num in title in normal state
 # check shortcuts
 # check copy paste indentation problem
 
@@ -48,7 +49,7 @@ HELPTEXT = '''		Keyboard shortcuts:
 		Ctrl-g  Gotoline
 				
 		Ctrl-C  Comment
-		Ctrl-U  Uncomment
+		Ctrl-X  Uncomment
 		Ctrl->  Indent
 		Ctrl-<  Unindent
 		
@@ -62,6 +63,10 @@ HELPTEXT = '''		Keyboard shortcuts:
 		Ctrl-s  Color setting
 		Ctrl-t  Toggle color setting
 		
+		Ctrl-n  Open new tab
+		Ctrl-d  Close current tab
+		Ctrl-w  Walk tabs
+		
 		Ctrl-plus 	Increase scrollbar-width
 		Ctrl-minus	Decrease scrollbar-width
 
@@ -69,6 +74,17 @@ HELPTEXT = '''		Keyboard shortcuts:
 		Alt-n  Next match
 		Alt-p  Prev match
 		
+		Is my file Saved? It is when:
+		- closing program, also configurations
+		- closing tab
+		- creating a new tab
+		- changing tabs (walking)
+		- pressing save-button:
+			If a file was already open and user changed filename in entry,
+			old file is first saved and then new file with same content
+			is created in current tab. Old file is closed from opened tabs.
+		- it also should be saved when loading file
+		  
 		'''
 
 			
@@ -185,7 +201,7 @@ class Editor(tkinter.Toplevel):
 					'Liberation Mono',
 					'Inconsolata'
 					]
-					
+		
 		self.badfonts = [
 					'Standard Symbols PS',
 					'OpenSymbol',
@@ -279,8 +295,12 @@ class Editor(tkinter.Toplevel):
 				try:
 					line = self.openfiles[self.filename][1]
 					self.contents.focus_set()
-					self.contents.see(line)
 					self.contents.mark_set('insert', line)
+					# ensure we see something before and after
+					self.contents.see('%s - 2 lines' % line)
+					self.update_idletasks()
+					self.contents.see('%s + 2 lines' % line)
+					
 				except tkinter.TclError:
 					self.openfiles[self.filename][1] = '1.0'
 				
@@ -332,7 +352,10 @@ class Editor(tkinter.Toplevel):
 					try:
 						line = self.openfiles[self.filename][1]
 						self.contents.focus_set()
-						self.contents.see(line)
+						# ensure we see something before and after
+						self.contents.see('%s - 2 lines' % line)
+						self.update_idletasks()
+						self.contents.see('%s + 2 lines' % line)
 						self.contents.mark_set('insert', line)
 					except tkinter.TclError:
 						self.openfiles[self.filename][1] = '1.0'
@@ -382,7 +405,10 @@ class Editor(tkinter.Toplevel):
 		try:
 			line = self.openfiles[self.filename][1]
 			self.contents.focus_set()
-			self.contents.see(line)
+			# ensure we see something before and after
+			self.contents.see('%s - 2 lines' % line)
+			self.update_idletasks()
+			self.contents.see('%s + 2 lines' % line)
 			self.contents.mark_set('insert', line)
 		except tkinter.TclError:
 			self.openfiles[self.filename][1] = '1.0'
@@ -452,8 +478,11 @@ class Editor(tkinter.Toplevel):
 		
 		f = False
 		while not f:
+			
 			if len(self.openfiles) == 0:
-				break
+				self.flag_newtab = True
+				self.filename = None
+				return
 				
 			if not start:
 				s = sorted(self.openfiles.keys())
@@ -475,7 +504,6 @@ class Editor(tkinter.Toplevel):
 			except OSError as e:
 				print(e.__str__())
 				self.openfiles.pop(self.filename)
-				self.filename = None
 				f = False
 
 
@@ -486,7 +514,10 @@ class Editor(tkinter.Toplevel):
 		try:
 			line = self.openfiles[self.filename][1]
 			self.contents.focus_set()
-			self.contents.see(line)
+			# ensure we see something before and after
+			self.contents.see('%s - 2 lines' % line)
+			self.update_idletasks()
+			self.contents.see('%s + 2 lines' % line)
 			self.contents.mark_set('insert', line)
 		except tkinter.TclError:
 			self.openfiles[self.filename][1] = '1.0'
@@ -501,6 +532,7 @@ class Editor(tkinter.Toplevel):
 
 	def get_config(self):
 		dictionary = dict()
+		
 		dictionary['fgcolor'] = self.contents.cget('foreground')
 		dictionary['bgcolor'] = self.contents.cget('background')
 		dictionary['fgdaycolor'] = self.fgdaycolor
@@ -512,19 +544,7 @@ class Editor(tkinter.Toplevel):
 		dictionary['menufont'] = self.menufont.config()
 		dictionary['scrollbar_width'] = self.scrollbar_width
 		dictionary['elementborderwidth'] = self.elementborderwidth
-		dictionary['filename'] = self.filename
 		
-		try:
-			pos = self.contents.index(tkinter.INSERT)
-		except tkinter.TclError:
-			pos = '1.0'
-		
-		for key in self.openfiles: self.openfiles[key][0] = 'inactive'
-		
-		if self.filename != None:
-			self.openfiles[self.filename][0] = 'active'
-			self.openfiles[self.filename][1] = pos
-
 		dictionary['openfiles'] = self.openfiles
 		
 		return dictionary
@@ -552,7 +572,7 @@ class Editor(tkinter.Toplevel):
 			if self.openfiles[key][0] == 'active':
 				self.filename = key
 				break
-				
+
 		
 	def increase_scrollbar_width(self, event=None):
 		'''	Change width of scrollbar of self.contents and of 
@@ -649,7 +669,10 @@ class Editor(tkinter.Toplevel):
 			self.contents.edit_reset()
 			self.contents.focus_set()
 			line = errline + '.0'
-			self.contents.see(line)
+			# ensure we see something before and after
+			self.contents.see('%s - 2 lines' % line)
+			self.update_idletasks()
+			self.contents.see('%s + 2 lines' % line)
 			self.contents.mark_set('insert', line)
 			self.bind("<Escape>", lambda e: self.iconify())
 			
@@ -951,7 +974,7 @@ class Editor(tkinter.Toplevel):
 							self.openfiles[self.filename].append('1.0')
 				
 	
-	def save(self):
+	def save(self, quitting=False):
 		tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
 				
 		# Check indent (tabify):
@@ -976,88 +999,24 @@ class Editor(tkinter.Toplevel):
 		# AND is first char before '.py' alpha-numeric.
 		
 		if not isinstance(fpath_in_entry, str) or fpath_in_entry.isspace() or '.py' not in fpath_in_entry or not fpath_in_entry[fpath_in_entry.index('.py')-1].isalnum():
+			if quitting == True: return
+			
 			print('Give a valid filename')
 			self.bell()
 			self.btn_save.flash()
-		else:
-			try:
-				pos = self.contents.index(tkinter.INSERT)
-			except tkinter.TclError:
-				pos = '1.0'
-			
-			if self.flag_newtab != True:
-				# Saving self.filename in current tab:
-				if fpath_in_entry == self.filename:
-					self.openfiles[self.filename][0] = 'active'
-					self.openfiles[self.filename][1] = pos
+			return
 
-					try:
-						f = open(self.filename, 'w', encoding='utf-8')
-					except OSError as e:
-						print(e.__str__())
-						print('\n Could not save file %s' % self.filename)
-					else:
-						f.write(tmp)
-						f.close()
-				else:
-					# Creating a new file in current tab with same content as self.filename.
-					# Check if trying to rewrite already opened file:
-					if fpath_in_entry in self.openfiles.keys():
-						self.bell()
-						return
-						
-					# Save old file first:
-					try:
-						f = open(self.filename, 'w', encoding='utf-8')
-					except OSError as e:
-						print(e.__str__())
-						print('\n Could not save file %s' % self.filename)
-					else:
-						f.write(tmp)
-						f.close()
-						
-					# Remove old filename from openfiles
-					self.openfiles.pop(self.filename)
-					
-					# Then save the new file:
-					self.filename = fpath_in_entry
-					
-					try:
-						self.openfiles[self.filename][0] = 'active'
-						self.openfiles[self.filename][1] = pos
-					except KeyError:
-						print('save1')
-						self.openfiles[self.filename] = list()
-						self.openfiles[self.filename].append('active')
-						self.openfiles[self.filename].append(pos)
-						
-					try:
-						f = open(self.filename, 'w', encoding='utf-8')
-					except OSError as e:
-						print(e.__str__())
-						print('\n Could not save file %s' % self.filename)
-					else:
-						f.write(tmp)
-						f.close()
-						
-			else:
-				# Saving in new tab:
-				#
-				# Old file was already saved in new_tab(), but it is still active.
-				# Check if trying to reopen already opened file:
-				if fpath_in_entry in self.openfiles.keys():
-					self.bell()
-					return
-					
-				for key in self.openfiles:
-					self.openfiles[key][0] = 'inactive'
-				
-				# Then save the new file:
-				self.filename = fpath_in_entry
-				self.openfiles[self.filename] = list()
-				self.openfiles[self.filename].append('active')
-				self.openfiles[self.filename].append(pos)
-				
+		try:
+			pos = self.contents.index(tkinter.INSERT)
+		except tkinter.TclError:
+			pos = '1.0'
+		
+		if self.flag_newtab != True:
+			# Saving self.filename in current tab:
+			if fpath_in_entry == self.filename:
+				self.openfiles[self.filename][0] = 'active'
+				self.openfiles[self.filename][1] = pos
+
 				try:
 					f = open(self.filename, 'w', encoding='utf-8')
 				except OSError as e:
@@ -1066,7 +1025,73 @@ class Editor(tkinter.Toplevel):
 				else:
 					f.write(tmp)
 					f.close()
-					self.flag_newtab = False
+			else:
+				# Creating a new file in current tab with same content as self.filename.
+				# Check if trying to rewrite already opened file:
+				if fpath_in_entry in self.openfiles.keys():
+					self.bell()
+					return
+					
+				# Save old file first:
+				try:
+					f = open(self.filename, 'w', encoding='utf-8')
+				except OSError as e:
+					print(e.__str__())
+					print('\n Could not save file %s' % self.filename)
+				else:
+					f.write(tmp)
+					f.close()
+					
+				# Remove old filename from openfiles
+				self.openfiles.pop(self.filename)
+				
+				# Then save the new file:
+				self.filename = fpath_in_entry
+				
+				try:
+					self.openfiles[self.filename][0] = 'active'
+					self.openfiles[self.filename][1] = pos
+				except KeyError:
+					self.openfiles[self.filename] = list()
+					self.openfiles[self.filename].append('active')
+					self.openfiles[self.filename].append(pos)
+					
+				try:
+					f = open(self.filename, 'w', encoding='utf-8')
+				except OSError as e:
+					print(e.__str__())
+					print('\n Could not save file %s' % self.filename)
+				else:
+					f.write(tmp)
+					f.close()
+					
+		else:
+			# Saving in new tab:
+			#
+			# Old file was already saved in new_tab(), but it is still active.
+			# Check if trying to reopen already opened file:
+			if fpath_in_entry in self.openfiles.keys():
+				self.bell()
+				return
+				
+			for key in self.openfiles:
+				self.openfiles[key][0] = 'inactive'
+			
+			# Then save the new file:
+			self.filename = fpath_in_entry
+			self.openfiles[self.filename] = list()
+			self.openfiles[self.filename].append('active')
+			self.openfiles[self.filename].append(pos)
+			
+			try:
+				f = open(self.filename, 'w', encoding='utf-8')
+			except OSError as e:
+				print(e.__str__())
+				print('\n Could not save file %s' % self.filename)
+			else:
+				f.write(tmp)
+				f.close()
+				self.flag_newtab = False
 	
 			
 	def raise_popup(self, event=None):
@@ -1083,7 +1108,10 @@ class Editor(tkinter.Toplevel):
 		try:
 			line = self.entry.get().strip() + '.0'
 			self.contents.focus_set()
-			self.contents.see(line)
+			# ensure we see something before and after
+			self.contents.see('%s - 2 lines' % line)
+			self.update_idletasks()
+			self.contents.see('%s + 2 lines' % line)
 			self.contents.mark_set('insert', line)
 			self.stop_gotoline()
 		except tkinter.TclError as e:
@@ -1155,7 +1183,10 @@ class Editor(tkinter.Toplevel):
 				try:
 					line = self.openfiles[self.filename][1]
 					self.contents.focus_set()
-					self.contents.see(line)
+					# ensure we see something before and after
+					self.contents.see('%s - 2 lines' % line)
+					self.update_idletasks()
+					self.contents.see('%s + 2 lines' % line)
 					self.contents.mark_set('insert', line)
 				except tkinter.TclError:
 					self.openfiles[self.filename][1] = '1.0'
@@ -1352,7 +1383,12 @@ class Editor(tkinter.Toplevel):
 		self.search_idx = self.contents.tag_nextrange('match', self.search_idx[1])
 		# change color
 		self.contents.tag_add('found', self.search_idx[0], self.search_idx[1])
-		self.contents.see(self.search_idx[0])
+		
+		# ensure we see something before and after
+		self.contents.see('%s - 2 lines' % self.search_idx[0])
+		self.update_idletasks()
+		self.contents.see('%s + 2 lines' % self.search_idx[0])
+
 		self.search_pos += 1
 		
 		# compare found to match
@@ -1387,7 +1423,12 @@ class Editor(tkinter.Toplevel):
 		
 		# change color
 		self.contents.tag_add('found', self.search_idx[0], self.search_idx[1])
-		self.contents.see(self.search_idx[0])
+		
+		# ensure we see something before and after
+		self.contents.see('%s - 2 lines' % self.search_idx[0])
+		self.update_idletasks()
+		self.contents.see('%s + 2 lines' % self.search_idx[0])
+		
 		self.search_pos -= 1
 		
 		# compare found to match
@@ -1592,7 +1633,7 @@ class Editor(tkinter.Toplevel):
 ################ Replace End
 	
 	def quit_me(self):
-		self.save()
+		self.save(quitting=True)
 		self.save_config()
 		self.quit()
 		self.destroy()
