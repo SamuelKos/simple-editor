@@ -21,23 +21,19 @@ Tested to work with Debian Buster and Bullseye.
 * Line numbering
 * Syntax highlighting
 
-# Installing and running
+# Installing
 debian-packages required: python3-tk
 
 ```console
 foo@bar:~$ sudo apt install python3-tk git
 foo@bar:~$ git clone https://github.com/SamuelKos/simple-editor
-foo@bar:~$ cd simple-editor
-foo@bar:~/simple-editor$ python3 simple_editor.py
 ```
 
-Running from Python console:
+Running from Python-console:
 
 ```console
 >>> import simple_editor
->>> from tkinter import Tk
->>> root=Tk().withdraw()
->>> e=simple_editor.Editor(root)
+>>> e=simple_editor.Editor()
 ```
 
 # Licence

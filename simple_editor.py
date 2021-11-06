@@ -1,7 +1,6 @@
 #TODO:
 
-# class for tab: name, filepath, active, position  
-# add day night optionmenu to colorchooser
+# class for tab: name, filepath, active, position
 # rewrite load with pen and paper
 # shortcut for: (do last search from cur pos, show next, select, exit)
 # 	because current search is not too useful  
@@ -21,7 +20,6 @@ import os
 
 # from current directory
 import changefont
-import changecolor
 
 # for executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
@@ -90,9 +88,9 @@ HELPTEXT = '''		Keyboard shortcuts:
 			
 class Editor(tkinter.Toplevel):
 
-	def __init__(self, root):
-		super().__init__(root, class_='Simple Editor')
-		self.top = root
+	def __init__(self):
+		self.root = tkinter.Tk().withdraw()
+		super().__init__(self.root, class_='Simple Editor')
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
 		self.titletext = 'Simple Editor'
 		self.title(self.titletext)
@@ -616,8 +614,8 @@ class Editor(tkinter.Toplevel):
 	def color_choose(self, event=None):
 		tmproot = tkinter.Tk().withdraw()
 		tmptop = tkinter.Toplevel(tmproot)
-		tmptop.colorbg = self.contents['bg']
-		tmptop.colorfg = self.contents['fg']
+		tmptop.colorbg = self.bgcolor
+		tmptop.colorfg = self.fgcolor
 		
 		tmptop.btnfg = tkinter.Button(tmptop, text='Change foreground color', font=('TkDefaultFont', 16), command=lambda args=['fg', tmptop]: self.chcolor(args))
 		tmptop.btnfg.pack(padx=10, pady=10)
@@ -660,12 +658,11 @@ class Editor(tkinter.Toplevel):
 		
 	def chcolor(self, args, event=None):
 		parent = args[1]
-			
-		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
-			insertbackground=self.fgcolor)
 		
 		if args[0] == 'bg':
 			parent.colorbg = tkinter.colorchooser.askcolor(initialcolor=parent.colorbg)[1]
+			if parent.colorbg in [None, '']:
+				return 'break'
 			
 			if self.curcolor == 'day':
 				self.bgdaycolor = parent.colorbg
@@ -675,6 +672,8 @@ class Editor(tkinter.Toplevel):
 				self.bgcolor = self.bgnightcolor
 		else:
 			parent.colorfg = tkinter.colorchooser.askcolor(initialcolor=parent.colorfg)[1]
+			if parent.colorfg in [None, '']:
+				return 'break'
 			
 			if self.curcolor == 'day':
 				self.fgdaycolor = parent.colorfg
@@ -1708,5 +1707,3 @@ class Editor(tkinter.Toplevel):
 		self.save_config()
 		self.quit()
 		self.destroy()
-
-
