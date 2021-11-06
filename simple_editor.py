@@ -609,12 +609,83 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def font_choose(self, event=None):		
-		self.choose = changefont.FontChooser([self.font, self.menufont])				
+		self.choose = changefont.FontChooser([self.font, self.menufont])
 		return 'break'
 		
 		
-	def color_choose(self, event=None):		
-		self.color = changecolor.ColorChooser([self.contents])				
+	def color_choose(self, event=None):
+		tmproot = tkinter.Tk().withdraw()
+		tmptop = tkinter.Toplevel(tmproot)
+		tmptop.colorbg = self.contents['bg']
+		tmptop.colorfg = self.contents['fg']
+		
+		tmptop.btnfg = tkinter.Button(tmptop, text='Change foreground color', font=('TkDefaultFont', 16), command=lambda args=['fg', tmptop]: self.chcolor(args))
+		tmptop.btnfg.pack(padx=10, pady=10)
+		
+		tmptop.btnbg = tkinter.Button(tmptop, text='Change background color', font=('TkDefaultFont', 16), command=lambda args=['bg', tmptop]: self.chcolor(args))
+		tmptop.btnbg.pack(padx=10, pady=10)
+		
+		tmptop.lb = tkinter.Listbox(tmptop, font=('TkDefaultFont', 12), selectmode=tkinter.SINGLE)
+		tmptop.lb.pack(pady=10)
+		tmptop.choiseslist = ['day', 'night']
+		
+		for item in tmptop.choiseslist:
+			tmptop.lb.insert('end', item)
+		
+		idx = tmptop.choiseslist.index(self.curcolor)
+		tmptop.lb.select_set(idx)
+		tmptop.lb.see(idx)
+		tmptop.lb.bind('<ButtonRelease-1>', lambda event, args=[tmptop]: self.choose_daynight(args, event))
+		
+		
+	def choose_daynight(self, args, event=None):
+		parent = args[0]
+		oldcolor = self.curcolor
+		self.curcolor = parent.lb.get(parent.lb.curselection())
+		
+		if self.curcolor != oldcolor:
+		
+			if self.curcolor == 'day':
+			
+				self.fgcolor = self.fgdaycolor
+				self.bgcolor = self.bgdaycolor
+			
+			else:
+				self.fgcolor = self.fgnightcolor
+				self.bgcolor = self.bgnightcolor
+			
+			self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
+			insertbackground=self.fgcolor)
+		
+		
+	def chcolor(self, args, event=None):
+		parent = args[1]
+			
+		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
+			insertbackground=self.fgcolor)
+		
+		if args[0] == 'bg':
+			parent.colorbg = tkinter.colorchooser.askcolor(initialcolor=parent.colorbg)[1]
+			
+			if self.curcolor == 'day':
+				self.bgdaycolor = parent.colorbg
+				self.bgcolor = self.bgdaycolor
+			else:
+				self.bgnightcolor = parent.colorbg
+				self.bgcolor = self.bgnightcolor
+		else:
+			parent.colorfg = tkinter.colorchooser.askcolor(initialcolor=parent.colorfg)[1]
+			
+			if self.curcolor == 'day':
+				self.fgdaycolor = parent.colorfg
+				self.fgcolor = self.fgdaycolor
+			else:
+				self.fgnightcolor = parent.colorfg
+				self.fgcolor = self.fgnightcolor
+			
+		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
+			insertbackground=self.fgcolor)
+		
 		return 'break'
 		
 

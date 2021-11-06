@@ -7,6 +7,7 @@ Tested to work with Debian Buster and Bullseye.
 * Auto-indent
 * Font Chooser
 * Color Chooser
+* Tabbed editing
 * Run current file
 * Search - Replace
 * Indent - Unindent
