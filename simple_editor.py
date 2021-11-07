@@ -483,18 +483,10 @@ class Editor(tkinter.Toplevel):
 				return
 				
 			if not start:
-				s = sorted(self.openfiles.keys())
-				
-				for i in range(len(s)):
-					if self.openfiles[s[i]][0] == 'active':
-						break
-				
-				if i == len(s) - 1:
-					i = 0
-				else:
-					i += 1
+				for key in self.openfiles.keys():
+					self.openfiles[key][0] == 'inactive'
 					
-				self.filename = s[i]
+				self.filename = key
 				
 			try:
 				start = False
@@ -508,6 +500,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.insert(tkinter.INSERT, f.read())
 		f.close()
 		self.entry.insert(0, self.filename)
+		self.openfiles[self.filename][0] = 'active'
 				
 		try:
 			line = self.openfiles[self.filename][1]
@@ -612,15 +605,15 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def color_choose(self, event=None):
-		tmproot = tkinter.Tk().withdraw()
-		tmptop = tkinter.Toplevel(tmproot)
-		tmptop.colorbg = self.bgcolor
-		tmptop.colorfg = self.fgcolor
+		# I am not sure why this works but it is possibly related
+		# to fact that there can only be one root window,
+		# or actually one Tcl-interpreter in single python-program or -console.
+		tmptop = tkinter.Toplevel()
 		
-		tmptop.btnfg = tkinter.Button(tmptop, text='Change foreground color', font=('TkDefaultFont', 16), command=lambda args=['fg', tmptop]: self.chcolor(args))
+		tmptop.btnfg = tkinter.Button(tmptop, text='Change foreground color', font=('TkDefaultFont', 16), command=lambda args=['fg']: self.chcolor(args))
 		tmptop.btnfg.pack(padx=10, pady=10)
 		
-		tmptop.btnbg = tkinter.Button(tmptop, text='Change background color', font=('TkDefaultFont', 16), command=lambda args=['bg', tmptop]: self.chcolor(args))
+		tmptop.btnbg = tkinter.Button(tmptop, text='Change background color', font=('TkDefaultFont', 16), command=lambda args=['bg']: self.chcolor(args))
 		tmptop.btnbg.pack(padx=10, pady=10)
 		
 		tmptop.lb = tkinter.Listbox(tmptop, font=('TkDefaultFont', 12), selectmode=tkinter.SINGLE)
@@ -657,29 +650,28 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def chcolor(self, args, event=None):
-		parent = args[1]
 		
 		if args[0] == 'bg':
-			parent.colorbg = tkinter.colorchooser.askcolor(initialcolor=parent.colorbg)[1]
-			if parent.colorbg in [None, '']:
+			tmpcolorbg = tkinter.colorchooser.askcolor(initialcolor=self.bgcolor)[1]
+			if tmpcolorbg in [None, '']:
 				return 'break'
 			
 			if self.curcolor == 'day':
-				self.bgdaycolor = parent.colorbg
+				self.bgdaycolor = tmpcolorbg
 				self.bgcolor = self.bgdaycolor
 			else:
-				self.bgnightcolor = parent.colorbg
+				self.bgnightcolor = tmpcolorbg
 				self.bgcolor = self.bgnightcolor
 		else:
-			parent.colorfg = tkinter.colorchooser.askcolor(initialcolor=parent.colorfg)[1]
-			if parent.colorfg in [None, '']:
+			tmpcolorfg = tkinter.colorchooser.askcolor(initialcolor=self.fgcolor)[1]
+			if tmpcolorfg in [None, '']:
 				return 'break'
 			
 			if self.curcolor == 'day':
-				self.fgdaycolor = parent.colorfg
+				self.fgdaycolor = tmpcolorfg
 				self.fgcolor = self.fgdaycolor
 			else:
-				self.fgnightcolor = parent.colorfg
+				self.fgnightcolor = tmpcolorfg
 				self.fgcolor = self.fgnightcolor
 			
 		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
