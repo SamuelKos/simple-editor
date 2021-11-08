@@ -267,6 +267,10 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def del_tab(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		if len(self.openfiles) == 0:
 			self.bell()
 			return 'break'
@@ -362,6 +366,10 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def walk_files(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		self.save()
 		f = False
 		
@@ -415,6 +423,10 @@ class Editor(tkinter.Toplevel):
 				
 		
 	def new_tab(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		if self.flag_newtab:
 			self.bell()
 			return 'break'
@@ -599,12 +611,20 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 		
 		
-	def font_choose(self, event=None):		
+	def font_choose(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		self.choose = changefont.FontChooser([self.font, self.menufont])
 		return 'break'
 		
 		
 	def color_choose(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		# I am not sure why this works but it is possibly related
 		# to fact that there can only be one root window,
 		# or actually one Tcl-interpreter in single python-program or -console.
@@ -1189,6 +1209,10 @@ class Editor(tkinter.Toplevel):
 		
 	
 	def gotoline(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		counter = 0
 		for line in self.contents.get('1.0', tkinter.END).splitlines():
 			counter += 1
@@ -1201,91 +1225,84 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def stop_help(self, event=None):
+		self.state = 'normal'
+		self.entry.config(state='normal')
 		self.contents.config(state='normal')
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
+		
 		self.contents.delete('1.0', tkinter.END)
 		
 		self.bind("<Escape>", lambda e: self.iconify())
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
-
-		self.bind("<Control-R>", self.replace_all)
-		self.bind("<Control-g>", self.gotoline)
-		self.bind("<Control-r>", self.replace)
-		self.bind("<Control-f>", self.search)
-		self.bind("<Control-p>", self.font_choose)
-		self.bind("<Control-s>", self.color_choose)
-		self.bind("<Control-n>", self.new_tab)
-		self.bind("<Control-d>", self.del_tab)
-		self.bind("<Control-w>", self.walk_files)
 		
-		self.contents.bind("<Control-X>", self.uncomment)
-		self.contents.bind("<Control-C>", self.comment)
-		self.contents.bind("<Control-greater>", self.indent)
-		self.contents.bind("<Control-less>", self.unindent)
-		self.contents.bind("<Control-z>", self.undo_override)
-		self.contents.bind("<Control-Z>", self.redo_override)
+		for key in self.openfiles:
+			if self.openfiles[key][0] == 'active':
+				self.filename = key
+				break
 		
-		if self.filename:
-			try:
-				f = open(self.filename)
-			except OSError as e:
-				print(e.__str__())
-				self.openfiles.pop(self.filename)
-				self.entry.delete(0, tkinter.END)
+		if not self.filename and len(self.openfiles) > 0:
+			self.filename = self.openfiles[0]
+			self.openfiles[0][0] = 'active'
+		
+		if self.filename:	
+			f = False
+			start = True
+		
+			while not f:
+				if len(self.openfiles) == 0: break
+				if not start: self.filename = self.openfiles[0]
 				
-				for key in self.openfiles:
-					self.openfiles[key][0] = 'inactive'
-				
-				self.filename = None
-				self.flag_newtab = True
-			else:
-				self.contents.insert(tkinter.INSERT, f.read())
-				f.close()
 				try:
-					line = self.openfiles[self.filename][1]
-					self.contents.focus_set()
-					# ensure we see something before and after
-					self.contents.see('%s - 2 lines' % line)
-					self.update_idletasks()
-					self.contents.see('%s + 2 lines' % line)
-					self.contents.mark_set('insert', line)
-				except tkinter.TclError:
-					self.openfiles[self.filename][1] = '1.0'
+					f = open(self.filename)
+					start = False
+				except OSError as e:
+					f = False
+					print(e.__str__())
+					self.openfiles.pop(self.filename)
+				else:
+					self.contents.insert(tkinter.INSERT, f.read())
+					self.entry.insert(0, self.filename)
+					f.close()
+					self.openfiles[self.filename][0] = 'active'
+					
+					try:
+						line = self.openfiles[self.filename][1]
+						self.contents.focus_set()
+						# ensure we see something before and after
+						self.contents.see('%s - 2 lines' % line)
+						self.update_idletasks()
+						self.contents.see('%s + 2 lines' % line)
+						self.contents.mark_set('insert', line)
+					except tkinter.TclError:
+						self.openfiles[self.filename][1] = '1.0'
 		else:
-			self.entry.delete(0, tkinter.END)
+			self.filename = None
+			self.flag_newtab = True
 	
 	
 	def help(self, event=None):
+		self.state = 'help'
 		if not self.flag_newtab: self.save()
+		
+		self.entry.delete(0, tkinter.END)
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.helptxt)
+		
+		self.entry.config(state='disabled')
 		self.contents.config(state='disabled')
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		
 		self.bind("<Button-3>", self.do_nothing)
-		self.bind("<Control-R>", self.do_nothing)
-		self.bind("<Control-g>", self.do_nothing)
-		self.bind("<Control-r>", self.do_nothing)
-		self.bind("<Control-f>", self.do_nothing)
-		self.bind("<Control-p>", self.do_nothing)
-		self.bind("<Control-s>", self.do_nothing)
-		self.bind("<Control-n>", self.do_nothing)
-		self.bind("<Control-d>", self.do_nothing)
-		self.bind("<Control-w>", self.do_nothing)
-		
-		self.contents.bind("<Control-X>", self.do_nothing)
-		self.contents.bind("<Control-C>", self.do_nothing)
-		self.contents.bind("<Control-greater>", self.do_nothing)
-		self.contents.bind("<Control-less>", self.do_nothing)
-		self.contents.bind("<Control-z>", self.do_nothing)
-		self.contents.bind("<Control-Z>", self.do_nothing)
-		
 		self.bind("<Escape>", self.stop_help)
 		
 		
 	def undo_override(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		try:
 			self.contents.edit_undo()
 		except tkinter.TclError:
@@ -1295,6 +1312,10 @@ class Editor(tkinter.Toplevel):
 		
 		
 	def redo_override(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		try:
 			self.contents.edit_redo()
 		except tkinter.TclError:
@@ -1304,6 +1325,10 @@ class Editor(tkinter.Toplevel):
 	
 	
 	def indent(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
@@ -1317,6 +1342,10 @@ class Editor(tkinter.Toplevel):
 		
 
 	def unindent(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
@@ -1345,6 +1374,10 @@ class Editor(tkinter.Toplevel):
 
 	
 	def comment(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
@@ -1362,6 +1395,10 @@ class Editor(tkinter.Toplevel):
 
 	def uncomment(self, event=None):
 		'''should work even if there are uncommented lines between commented lines'''
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
 			endline = int(self.contents.index(tkinter.SEL_LAST).split(sep='.')[0])
@@ -1576,6 +1613,10 @@ class Editor(tkinter.Toplevel):
 
 
 	def search(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		self.state = 'normal'
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
@@ -1591,6 +1632,10 @@ class Editor(tkinter.Toplevel):
 ################ Replace Begin
 
 	def replace(self, event=None, state='replace'):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		self.state = state
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
@@ -1603,6 +1648,10 @@ class Editor(tkinter.Toplevel):
 
 
 	def replace_all(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
 		self.replace(event, state='replace_all')
 		
 		
