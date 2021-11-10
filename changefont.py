@@ -8,6 +8,7 @@ class FontChooser(tkinter.Toplevel):
 		'''
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root)
+		self.title('Choose Font')
 		self.fonts = fontlist
 		self.badfonts = [
 					'Standard Symbols PS',

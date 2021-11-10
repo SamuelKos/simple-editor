@@ -266,12 +266,31 @@ class Editor(tkinter.Toplevel):
 		return 'break'
 		
 		
-	def del_tab(self, event=None):
-		if self.state != 'normal':
+	def quit_me(self):
+		self.save(quitting=True)
+		self.save_config()
+		self.quit()
+		self.destroy()
+
+
+############## Tab Related Begin
+	
+	def new_tab(self, event=None):
+		if self.state != 'normal' or self.flag_newtab:
 			self.bell()
 			return "break"
 			
-		if len(self.openfiles) == 0:
+		self.save()
+		self.contents.delete('1.0', tkinter.END)
+		self.entry.delete(0, tkinter.END)
+		self.filename = None
+		self.flag_newtab = True
+		
+		return 'break'
+		
+		
+	def del_tab(self, event=None):
+		if (len(self.openfiles) == 0) or (self.state != 'normal'):
 			self.bell()
 			return 'break'
 		
@@ -420,44 +439,9 @@ class Editor(tkinter.Toplevel):
 			self.openfiles[self.filename][1] = '1.0'
 				
 		return 'break'
-				
 		
-	def new_tab(self, event=None):
-		if self.state != 'normal':
-			self.bell()
-			return "break"
-			
-		if self.flag_newtab:
-			self.bell()
-			return 'break'
-			
-		self.save()
-		self.contents.delete('1.0', tkinter.END)
-		self.entry.delete(0, tkinter.END)
-		self.filename = None
-		self.flag_newtab = True
-		
-		return 'break'
-		
-		
-	def toggle_color(self, event=None):
-		if self.curcolor == 'day':
-			self.fgcolor = self.fgnightcolor
-			self.bgcolor = self.bgnightcolor
-		else:
-			self.fgcolor = self.fgdaycolor
-			self.bgcolor = self.bgdaycolor
-			
-		if self.curcolor == 'day':
-			self.curcolor = 'night'
-		else:
-			self.curcolor = 'day'
-			
-		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
-			insertbackground=self.fgcolor)
-			
-		return 'break'
-		
+########## Tab Related End
+########## Configuration Related Begin
 
 	def save_config(self, event=None):
 		try:
@@ -471,7 +455,58 @@ class Editor(tkinter.Toplevel):
 			f.write(string_representation)
 			f.close()
 
-			
+	
+	def load_config(self, fileobject):
+		string_representation = fileobject.read()
+		data = json.loads(string_representation)
+		self.set_config(data)
+		self.apply_config()
+		
+		
+	def get_config(self):
+		dictionary = dict()
+		
+		dictionary['fgcolor'] = self.contents.cget('foreground')
+		dictionary['bgcolor'] = self.contents.cget('background')
+		dictionary['fgdaycolor'] = self.fgdaycolor
+		dictionary['bgdaycolor'] = self.bgdaycolor
+		dictionary['fgnightcolor'] = self.fgnightcolor
+		dictionary['bgnightcolor'] = self.bgnightcolor
+		dictionary['curcolor'] = self.curcolor
+		dictionary['font'] = self.font.config()
+		dictionary['menufont'] = self.menufont.config()
+		dictionary['scrollbar_width'] = self.scrollbar_width
+		dictionary['elementborderwidth'] = self.elementborderwidth
+		
+		dictionary['openfiles'] = self.openfiles
+		
+		return dictionary
+		
+		
+	def set_config(self, dictionary):
+		self.fgnightcolor = dictionary['fgnightcolor']
+		self.bgnightcolor = dictionary['bgnightcolor']
+		self.fgdaycolor = dictionary['fgdaycolor'] 
+		self.bgdaycolor = dictionary['bgdaycolor'] 
+		self.fgcolor = dictionary['fgcolor']
+		self.bgcolor = dictionary['bgcolor']
+		self.curcolor = dictionary['curcolor']
+		
+		self.font.config(**dictionary['font'])
+		self.menufont.config(**dictionary['menufont'])
+		self.scrollbar_width 	= dictionary['scrollbar_width']
+		self.elementborderwidth	= dictionary['elementborderwidth']
+		self.contents.vbar.config(width=self.scrollbar_width)
+		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
+
+		self.openfiles = dictionary['openfiles']
+		
+		for key in self.openfiles:
+			if self.openfiles[key][0] == 'active':
+				self.filename = key
+				break
+
+
 	def apply_config(self):
 		self.tab_width = self.font.measure(4*' ') #############################
 		self.contents.config(font=self.font, foreground=self.fgcolor,
@@ -508,7 +543,6 @@ class Editor(tkinter.Toplevel):
 				self.openfiles.pop(self.filename)
 				f = False
 
-
 		self.contents.insert(tkinter.INSERT, f.read())
 		f.close()
 		self.entry.insert(0, self.filename)
@@ -524,59 +558,11 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', line)
 		except tkinter.TclError:
 			self.openfiles[self.filename][1] = '1.0'
-				
-				
-	def load_config(self, fileobject):
-		string_representation = fileobject.read()
-		data = json.loads(string_representation)
-		self.set_config(data)
-		self.apply_config()
-			
+		
+		
+########## Configuration Related End
+########## Theme Related Begin
 
-	def get_config(self):
-		dictionary = dict()
-		
-		dictionary['fgcolor'] = self.contents.cget('foreground')
-		dictionary['bgcolor'] = self.contents.cget('background')
-		dictionary['fgdaycolor'] = self.fgdaycolor
-		dictionary['bgdaycolor'] = self.bgdaycolor
-		dictionary['fgnightcolor'] = self.fgnightcolor
-		dictionary['bgnightcolor'] = self.bgnightcolor
-		dictionary['curcolor'] = self.curcolor
-		dictionary['font'] = self.font.config()
-		dictionary['menufont'] = self.menufont.config()
-		dictionary['scrollbar_width'] = self.scrollbar_width
-		dictionary['elementborderwidth'] = self.elementborderwidth
-		
-		dictionary['openfiles'] = self.openfiles
-		
-		return dictionary
-			
-			
-	def set_config(self, dictionary):
-		self.fgnightcolor = dictionary['fgnightcolor']
-		self.bgnightcolor = dictionary['bgnightcolor']
-		self.fgdaycolor = dictionary['fgdaycolor'] 
-		self.bgdaycolor = dictionary['bgdaycolor'] 
-		self.fgcolor = dictionary['fgcolor']
-		self.bgcolor = dictionary['bgcolor']
-		self.curcolor = dictionary['curcolor']
-		
-		self.font.config(**dictionary['font'])
-		self.menufont.config(**dictionary['menufont'])
-		self.scrollbar_width 	= dictionary['scrollbar_width']
-		self.elementborderwidth	= dictionary['elementborderwidth']
-		self.contents.vbar.config(width=self.scrollbar_width)
-		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
-
-		self.openfiles = dictionary['openfiles']
-		
-		for key in self.openfiles:
-			if self.openfiles[key][0] == 'active':
-				self.filename = key
-				break
-
-		
 	def increase_scrollbar_width(self, event=None):
 		'''	Change width of scrollbar of self.contents and of 
 			tkinter.filedialog.FileDialog which is used in self.load().
@@ -610,7 +596,26 @@ class Editor(tkinter.Toplevel):
 			
 		return 'break'
 		
+
+	def toggle_color(self, event=None):
+		if self.curcolor == 'day':
+			self.fgcolor = self.fgnightcolor
+			self.bgcolor = self.bgnightcolor
+		else:
+			self.fgcolor = self.fgdaycolor
+			self.bgcolor = self.bgdaycolor
+			
+		if self.curcolor == 'day':
+			self.curcolor = 'night'
+		else:
+			self.curcolor = 'day'
+			
+		self.contents.config(foreground=self.fgcolor, background=self.bgcolor,
+			insertbackground=self.fgcolor)
+			
+		return 'break'
 		
+			
 	def font_choose(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -629,7 +634,7 @@ class Editor(tkinter.Toplevel):
 		# to fact that there can only be one root window,
 		# or actually one Tcl-interpreter in single python-program or -console.
 		tmptop = tkinter.Toplevel()
-		
+		tmptop.title('Choose Color')
 		tmptop.btnfg = tkinter.Button(tmptop, text='Change foreground color', font=('TkDefaultFont', 16), command=lambda args=['fg']: self.chcolor(args))
 		tmptop.btnfg.pack(padx=10, pady=10)
 		
@@ -699,6 +704,8 @@ class Editor(tkinter.Toplevel):
 		
 		return 'break'
 		
+########## Theme Related End
+########## Run file Related Begin
 
 	def enter(self, tagname, event=None):
 		''' Used in error-page, when mousecursor enters hyperlink tagname.
@@ -739,15 +746,24 @@ class Editor(tkinter.Toplevel):
 			print('\n Could not open file %s' % filepath)
 		else:
 			self.contents.delete('1.0', tkinter.END)
-
-			for line in f.readlines():
-				self.contents.insert(tkinter.INSERT, line)
-
+			self.contents.insert(tkinter.INSERT, f.read())
 			f.close()
 			
 			self.filename = filepath
+			
+			for key in self.openfiles:
+				self.openfiles[key][0] = 'inactive'
+			
+			if self.filename not in self.openfiles.keys():
+				self.openfiles[self.filename] = list()
+				self.openfiles[self.filename].append('active')
+				self.openfiles[self.filename].append(errline)
+			else:
+				self.openfiles[self.filename][0] = 'active'
+				self.openfiles[self.filename][1] = errline
+				
 			self.entry.delete(0, tkinter.END)
-			self.entry.insert(0, filepath)
+			self.entry.insert(0, self.filename)
 			self.contents.edit_reset()
 			self.contents.focus_set()
 			line = errline + '.0'
@@ -777,7 +793,7 @@ class Editor(tkinter.Toplevel):
 			errors in your program, you should use logging (in except-block)
 			if you are not 100% sure about your code in except-block.
 		'''
-		if self.flag_newtab:
+		if (self.state != 'normal') or (self.flag_newtab) or (self.filename not in self.openfiles.keys()):
 			self.bell()
 			return
 			
@@ -830,7 +846,7 @@ class Editor(tkinter.Toplevel):
 				
 
 	def show_errors(self):
-		''' Show traceback with added hyperlinks from last run.
+		''' Show traceback from last run with added hyperlinks.
 		'''
 		
 		self.bind("<Escape>", self.stop_show_errors)
@@ -864,12 +880,101 @@ class Editor(tkinter.Toplevel):
 			print('\n Could not open file %s' % self.filename)
 		else:
 			self.contents.delete('1.0', tkinter.END)
-
-			for line in f.readlines():
-				self.contents.insert(tkinter.INSERT, line)
-
+			self.contents.insert(tkinter.INSERT, f.read())
 			f.close()
 
+########## Run file Related End
+########## Overrides Begin
+
+	def raise_popup(self, event=None):
+		self.popup_whohasfocus = event.widget
+		self.popup.post(event.x_root, event.y_root)
+		self.popup.focus_set() # Needed to remove popup when clicked outside.
+		
+		
+	def popup_focusOut(self, event=None):
+		self.popup.unpost() 
+	
+
+	def copy(self):
+		self.popup_whohasfocus.event_generate('<<Copy>>')
+
+
+	def paste(self):
+		self.popup_whohasfocus.event_generate('<<Paste>>')
+
+
+	def undo_override(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
+		try:
+			self.contents.edit_undo()
+		except tkinter.TclError:
+			self.contents.bell()
+			
+		return 'break'
+		
+		
+	def redo_override(self, event=None):
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+			
+		try:
+			self.contents.edit_redo()
+		except tkinter.TclError:
+			self.contents.bell()
+			
+		return 'break'
+		
+		
+	def select_all(self, event):
+		self.contents.tag_remove('sel', '1.0', tkinter.END)
+		self.contents.tag_add('sel', 1.0, tkinter.END)
+		return "break"
+
+
+	def return_override(self, event):
+		# Cursor indexes when pressed return:
+		line, row = map(int, self.contents.index(tkinter.INSERT).split('.'))			
+		# is same as:
+		# line = int(self.contents.index(tkinter.INSERT).split('.')[0])
+		# row = int(self.contents.index(tkinter.INSERT).split('.')[1])
+		
+		# First an easy case:
+		if row == 0:
+			self.contents.insert(tkinter.INSERT, '\n')
+			self.contents.see(f'{line+1}.0')
+			self.contents.edit_separator()
+			return "break"
+				
+		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
+		
+		# Then one special case: check if cursor is inside indentation,
+		# and line is not empty.
+		
+		if tmp[:row].isspace() and not tmp[row:].isspace():
+			self.contents.insert(tkinter.INSERT, '\n')
+			self.contents.insert('%s.0' % str(line+1), tmp[:row])
+			self.contents.see(f'{line+1}.0')
+			self.contents.edit_separator()
+			return "break"
+			
+		else:		
+			for i in range(len(tmp)):
+				if tmp[i] != '\t':
+					break
+	
+			self.contents.insert(tkinter.INSERT, '\n') # Manual newline because return is overrided.
+			self.contents.insert(tkinter.INSERT, i*'\t')
+			self.contents.see(f'{line+1}.0')
+			self.contents.edit_separator()
+			return "break"
+
+########## Overrides End
+########## Save and Load Begin
 
 	def tabify(self, line):
 		
@@ -897,14 +1002,6 @@ class Editor(tkinter.Toplevel):
 		tabified_line = ''.join([indent_string, line])
 		return tabified_line
 	
-
-	def copy(self):
-		self.popup_whohasfocus.event_generate('<<Copy>>')
-
-
-	def paste(self):
-		self.popup_whohasfocus.event_generate('<<Paste>>')
-
 
 	def load(self, event=None, no_such_file=False):
 		tmp = self.entry.get().strip()
@@ -1081,12 +1178,13 @@ class Editor(tkinter.Toplevel):
 		# AND is first char before '.py' alpha-numeric.
 		
 		if not isinstance(fpath_in_entry, str) or fpath_in_entry.isspace() or '.py' not in fpath_in_entry or not fpath_in_entry[fpath_in_entry.index('.py')-1].isalnum():
-			if quitting == True: return
+			if quitting == True:
+				return True
 			
 			print('Give a valid filename')
 			self.bell()
 			self.btn_save.flash()
-			return
+			return False
 
 		try:
 			pos = self.contents.index(tkinter.INSERT)
@@ -1104,15 +1202,17 @@ class Editor(tkinter.Toplevel):
 				except OSError as e:
 					print(e.__str__())
 					print('\n Could not save file %s' % self.filename)
+					return False
 				else:
 					f.write(tmp)
 					f.close()
+					return True
 			else:
 				# Creating a new file in current tab with same content as self.filename.
 				# Check if trying to rewrite already opened file:
 				if fpath_in_entry in self.openfiles.keys():
 					self.bell()
-					return
+					return False
 					
 				# Save old file first:
 				try:
@@ -1120,6 +1220,7 @@ class Editor(tkinter.Toplevel):
 				except OSError as e:
 					print(e.__str__())
 					print('\n Could not save file %s' % self.filename)
+					return False
 				else:
 					f.write(tmp)
 					f.close()
@@ -1130,22 +1231,23 @@ class Editor(tkinter.Toplevel):
 				# Then save the new file:
 				self.filename = fpath_in_entry
 				
-				try:
-					self.openfiles[self.filename][0] = 'active'
-					self.openfiles[self.filename][1] = pos
-				except KeyError:
-					self.openfiles[self.filename] = list()
-					self.openfiles[self.filename].append('active')
-					self.openfiles[self.filename].append(pos)
+				self.openfiles[self.filename] = list()
+				self.openfiles[self.filename].append('active')
+				self.openfiles[self.filename].append(pos)
 					
 				try:
 					f = open(self.filename, 'w', encoding='utf-8')
 				except OSError as e:
 					print(e.__str__())
 					print('\n Could not save file %s' % self.filename)
+					self.openfiles.pop(self.filename)
+					self.flag_newtab = True
+					self.filename = None
+					return False
 				else:
 					f.write(tmp)
 					f.close()
+					return True
 					
 		else:
 			# Saving in new tab:
@@ -1154,7 +1256,7 @@ class Editor(tkinter.Toplevel):
 			# Check if trying to reopen already opened file:
 			if fpath_in_entry in self.openfiles.keys():
 				self.bell()
-				return
+				return False
 				
 			for key in self.openfiles:
 				self.openfiles[key][0] = 'inactive'
@@ -1170,22 +1272,19 @@ class Editor(tkinter.Toplevel):
 			except OSError as e:
 				print(e.__str__())
 				print('\n Could not save file %s' % self.filename)
+				self.openfiles.pop(self.filename)
+				self.flag_newtab = True
+				self.filename = None
+				return False
 			else:
 				f.write(tmp)
 				f.close()
 				self.flag_newtab = False
+				return True
 	
-			
-	def raise_popup(self, event=None):
-		self.popup_whohasfocus = event.widget
-		self.popup.post(event.x_root, event.y_root)
-		self.popup.focus_set() # Needed to remove popup when clicked outside.
-		
-		
-	def popup_focusOut(self, event=None):
-		self.popup.unpost() 
-	
-	
+########## Save and Load End
+########## Gotoline and Help Begin
+
 	def do_gotoline(self, event=None):
 		try:
 			line = self.entry.get().strip() + '.0'
@@ -1250,7 +1349,12 @@ class Editor(tkinter.Toplevel):
 			start = True
 		
 			while not f:
-				if len(self.openfiles) == 0: break
+			
+				if len(self.openfiles) == 0:
+					self.filename = None
+					self.flag_newtab = True
+					break
+					
 				if not start: self.filename = self.openfiles[0]
 				
 				try:
@@ -1264,6 +1368,10 @@ class Editor(tkinter.Toplevel):
 					self.contents.insert(tkinter.INSERT, f.read())
 					self.entry.insert(0, self.filename)
 					f.close()
+					
+					for key in self.openfiles:
+						self.openfiles[key][0] = 'inactive'
+					
 					self.openfiles[self.filename][0] = 'active'
 					
 					try:
@@ -1296,34 +1404,10 @@ class Editor(tkinter.Toplevel):
 		
 		self.bind("<Button-3>", self.do_nothing)
 		self.bind("<Escape>", self.stop_help)
-		
-		
-	def undo_override(self, event=None):
-		if self.state != 'normal':
-			self.bell()
-			return "break"
 			
-		try:
-			self.contents.edit_undo()
-		except tkinter.TclError:
-			self.contents.bell()
-			
-		return 'break'
-		
-		
-	def redo_override(self, event=None):
-		if self.state != 'normal':
-			self.bell()
-			return "break"
-			
-		try:
-			self.contents.edit_redo()
-		except tkinter.TclError:
-			self.contents.bell()
-			
-		return 'break'
-	
-	
+########## Gotoline and Help End
+########## Indent and Comment Begin
+
 	def indent(self, event=None):
 		if self.state != 'normal':
 			self.bell()
@@ -1420,51 +1504,7 @@ class Editor(tkinter.Toplevel):
 			print(e)
 		return "break"
 		
-
-	def select_all(self, event):
-		self.contents.tag_remove('sel', '1.0', tkinter.END)
-		self.contents.tag_add('sel', 1.0, tkinter.END)
-		return "break"
-
-
-	def return_override(self, event):
-		# Cursor indexes when pressed return:
-		line, row = map(int, self.contents.index(tkinter.INSERT).split('.'))			
-		# is same as:
-		# line = int(self.contents.index(tkinter.INSERT).split('.')[0])
-		# row = int(self.contents.index(tkinter.INSERT).split('.')[1])
-		
-		# First an easy case:
-		if row == 0:
-			self.contents.insert(tkinter.INSERT, '\n')
-			self.contents.see(f'{line+1}.0')
-			self.contents.edit_separator()
-			return "break"
-				
-		tmp = self.contents.get('%s.0' % str(line),'%s.0 lineend' % str(line))
-		
-		# Then one special case: check if cursor is inside indentation,
-		# and line is not empty.
-		
-		if tmp[:row].isspace() and not tmp[row:].isspace():
-			self.contents.insert(tkinter.INSERT, '\n')
-			self.contents.insert('%s.0' % str(line+1), tmp[:row])
-			self.contents.see(f'{line+1}.0')
-			self.contents.edit_separator()
-			return "break"
-			
-		else:		
-			for i in range(len(tmp)):
-				if tmp[i] != '\t':
-					break
-	
-			self.contents.insert(tkinter.INSERT, '\n') # Manual newline because return is overrided.
-			self.contents.insert(tkinter.INSERT, i*'\t')
-			self.contents.see(f'{line+1}.0')
-			self.contents.edit_separator()
-			return "break"
-
-
+########## Indent and Comment End
 ################ Search Begin
 
 	def show_next(self, event=None):
@@ -1742,9 +1782,3 @@ class Editor(tkinter.Toplevel):
 
 
 ################ Replace End
-	
-	def quit_me(self):
-		self.save(quitting=True)
-		self.save_config()
-		self.quit()
-		self.destroy()
