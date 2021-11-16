@@ -1329,6 +1329,86 @@ class Editor(tkinter.Toplevel):
 							self.openfiles[self.filename].append('1.0')
 				
 	
+##	def save1233(self, tabinstance=False, quitting=False):
+##	
+##		fpath_in_entry = self.entry.get().strip()
+##		
+##		if '/' not in fpath_in_entry:
+##				fpath_in_entry = os.path.abspath('.') + '/' + fpath_in_entry
+##		
+##		if not isinstance(fpath_in_entry, str) or fpath_in_entry.isspace() or '.py' not in fpath_in_entry or not fpath_in_entry[fpath_in_entry.index('.py')-1].isalnum():
+##			if quitting == True:
+##				return True
+##			
+##			print('Give a valid filename')
+##			self.bell()
+##			return False
+##		
+##		try:
+##			pos = self.contents.index(tkinter.INSERT)
+##		except tkinter.TclError:
+##			pos = '1.0'
+##					
+##		tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
+##		
+##		# Check indent (tabify):
+##		tmp[:] = [self.tabify(line) for line in tmp]
+##		tmp = ''.join(tmp)[:-1]
+##		
+##		# update active tab contents first:
+##		if not tabinstance:
+##			for tab in self.tabs:
+##				if tab.active == True:
+##					tab.position = pos
+##					tab.contents = tmp
+##					break
+##		else:		
+##			tabinstance.position = pos
+##			tabinstance.contents = tmp
+##			tabinstance.active = True
+##		
+##		openfiles = [tab.filepath for tab in self.tabs]
+##		
+##		# Save one tab:
+##		if tabinstance:
+##			# If tab is new(no filepath) and not trying to rewrite already open file, then give it filename:
+##			if tabinstance.type != 'normal' and fpath_in_entry not in openfiles:
+##				
+##				self.filename = fpath_in_entry
+##					
+##				try:
+##					f = open(self.filename, 'w', encoding='utf-8')
+##				except OSError as e:
+##					print(e.__str__())
+##					print('\n Could not save file %s' % self.filename)
+##					return False
+##				else:
+##					f.write(tmp)
+##					f.close()
+##					tabinstance.filepath = self.filename
+##					tabinstance.type = 'normal'
+##					return True
+##		
+##		# Save all tabs:
+##		else:
+##			saving_error = False
+##			
+##			for tab in self.tabs:
+##				if tab.type == normal:
+##				
+##					try:
+##						f = open(tab.filepath, 'w', encoding='utf-8')
+##					except OSError as e:
+##						print(e.__str__())
+##						print('\n Could not save file %s' % tab.filepath)
+##						saving_error = True
+##					else:
+##						f.write(tmp)
+##						f.close()
+##						
+##			return saving_error
+		
+			
 	def save(self, quitting=False):
 		tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
 				
@@ -1359,7 +1439,6 @@ class Editor(tkinter.Toplevel):
 			
 			print('Give a valid filename')
 			self.bell()
-			self.btn_save.flash()
 			return False
 
 		try:
