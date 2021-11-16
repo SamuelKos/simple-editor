@@ -331,7 +331,7 @@ class Editor(tkinter.Toplevel):
 ##			self.bell()
 ##			return "break"
 ##			
-##		self.save(self.tab)
+##		self.save()
 ##		self.contents.delete('1.0', tkinter.END)
 ##		self.entry.delete(0, tkinter.END)
 ##		
@@ -1329,20 +1329,14 @@ class Editor(tkinter.Toplevel):
 							self.openfiles[self.filename].append('1.0')
 				
 	
-##	def save1233(self, tabinstance=False, quitting=False):
-##	
+##	def save1233(self, quitting=False):
+##		'''
+##		'''
+##		
 ##		fpath_in_entry = self.entry.get().strip()
 ##		
 ##		if '/' not in fpath_in_entry:
 ##				fpath_in_entry = os.path.abspath('.') + '/' + fpath_in_entry
-##		
-##		if not isinstance(fpath_in_entry, str) or fpath_in_entry.isspace() or '.py' not in fpath_in_entry or not fpath_in_entry[fpath_in_entry.index('.py')-1].isalnum():
-##			if quitting == True:
-##				return True
-##			
-##			print('Give a valid filename')
-##			self.bell()
-##			return False
 ##		
 ##		try:
 ##			pos = self.contents.index(tkinter.INSERT)
@@ -1354,61 +1348,66 @@ class Editor(tkinter.Toplevel):
 ##		# Check indent (tabify):
 ##		tmp[:] = [self.tabify(line) for line in tmp]
 ##		tmp = ''.join(tmp)[:-1]
-##		
-##		# update active tab contents first:
-##		if not tabinstance:
-##			for tab in self.tabs:
-##				if tab.active == True:
-##					tab.position = pos
-##					tab.contents = tmp
-##					break
-##		else:		
-##			tabinstance.position = pos
-##			tabinstance.contents = tmp
-##			tabinstance.active = True
-##		
+##
+##		self.tab.position = pos
+##		self.tab.contents = tmp
+##
 ##		openfiles = [tab.filepath for tab in self.tabs]
 ##		
-##		# Save one tab:
-##		if tabinstance:
-##			# If tab is new(no filepath) and not trying to rewrite already open file, then give it filename:
-##			if tabinstance.type != 'normal' and fpath_in_entry not in openfiles:
+##		# creating new file
+##		if fpath_in_entry != self.tab.filepath:
+##		
+##			if fpath_in_entry in openfiles:
+##				return
 ##				
-##				self.filename = fpath_in_entry
-##					
+##			if self.tab.type == 'newtab':
 ##				try:
-##					f = open(self.filename, 'w', encoding='utf-8')
+##					f = open(fpath_in_entry, 'w', encoding='utf-8')
 ##				except OSError as e:
 ##					print(e.__str__())
-##					print('\n Could not save file %s' % self.filename)
-##					return False
+##					print('\n Could not save file %s' % fpath_in_entry)
+##					return
 ##				else:
 ##					f.write(tmp)
 ##					f.close()
-##					tabinstance.filepath = self.filename
-##					tabinstance.type = 'normal'
-##					return True
-##		
-##		# Save all tabs:
-##		else:
-##			saving_error = False
-##			
-##			for tab in self.tabs:
-##				if tab.type == normal:
+##					self.tab.filepath = fpath_in_entry
+##					self.tab.type = 'normal'
+##					
+##			# want to create new file with same contents, save old first:
+##			else:
+##				try:
+##					f = open(self.tab.filepath, 'w', encoding='utf-8')
+##				except OSError as e:
+##					print(e.__str__())
+##					print('\n Could not save file %s' % self.tab.filepath)
+##					return
+##				else:
+##					f.write(tmp)
+##					f.close()
+##					self.tabs.remove(self.tab)
 ##				
-##					try:
-##						f = open(tab.filepath, 'w', encoding='utf-8')
-##					except OSError as e:
-##						print(e.__str__())
-##						print('\n Could not save file %s' % tab.filepath)
-##						saving_error = True
-##					else:
-##						f.write(tmp)
-##						f.close()
-##						
-##			return saving_error
+##				# save newtab to disk some other time
+##				self.new_tab()
+##				self.tab.filepath = fpath_in_entry
+##				self.tab.contents = tmp
+##				self.tab.position = pos
+##				self.tab.type = 'normal'
+##				
+##		else:
+##			# saving existing file:
+##			if self.tab.type == 'newtab' or self.tab.active == False: return
+##			
+##			try:
+##				f = open(self.tab.filepath, 'w', encoding='utf-8')
+##			except OSError as e:
+##				print(e.__str__())
+##				print('\n Could not save file %s' % self.tab.filepath)
+##				return
+##			else:
+##				f.write(tmp)
+##				f.close()
+
 		
-			
 	def save(self, quitting=False):
 		tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
 				
