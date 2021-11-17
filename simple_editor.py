@@ -10,7 +10,8 @@
 ##		Tab
 ##	
 ##	untabified areas:
-##		Save and Load
+##		init
+##		Load
 ##		Run file Related
 
 
@@ -327,22 +328,32 @@ class Editor(tkinter.Toplevel):
 		self.filename = None
 		self.flag_newtab = True
 		
-##		if self.state != 'normal':
-##			self.bell()
-##			return "break"
+		if self.state != 'normal':
+			self.bell()
+			return "break"
+
+##		if self.tab.type == 'normal':
+##			tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
+##			self.tab.contents = tmp
 ##			
-##		self.save()
+##			try:
+##				pos = self.contents.index(tkinter.INSERT)
+##			except tkinter.TclError:
+##				pos = '1.0'
+##				
+##			self.tab.position = pos
+##		
+##		
 ##		self.contents.delete('1.0', tkinter.END)
 ##		self.entry.delete(0, tkinter.END)
 ##		
-##		for tab in self.tabs: tab.active = False
+##		self.tab.active = False
 ##		newtab = Tab(active=True, filepath=None, contents='', position='1.0', type='newtab')
 ##		self.tabs.append(newtab)
 ##		self.tab = self.tabs[-1]
 ##		self.tab.active = True
-##		self.filename = None
-		
-		return 'break'
+##		
+##		return 'break'
 		
 		
 	def del_tab(self, event=None):
@@ -350,39 +361,40 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return 'break'
 			
-##		if (len(self.tabs) == 0) or (self.state != 'normal'):
+##		if ((len(self.tabs) == 1) and self.tab.type == 'newtab') or (self.state != 'normal'):
 ##			self.bell()
 ##			return 'break'
 ##
 ##		if self.tab.type == 'normal':
-##			self.save(self.tab)
+##			self.save()
 ##			
 ##		self.tabs.remove(self.tab)
-##			
-##		if (len(self.tabs) == 0):
-##			self.newtab()
-##		
-##		self.tab = self.tabs[0]
-##		self.filename = self.tab.filepath
-##		
 ##		self.contents.delete('1.0', tkinter.END)
 ##		self.entry.delete(0, tkinter.END)
-##		
-##		if self.filename:
+##			
+##		if (len(self.tabs) == 0):
+##			newtab = Tab(active=True, filepath=None, contents='', position='1.0', type='newtab')
+##			self.tabs.append(newtab)
+##			
+##		self.tab = self.tabs[-1]
+##		self.tab.active = True
+##
+##		if self.tab.type == 'normal':
 ##			self.contents.insert(tkinter.INSERT, self.tab.contents)
 ##			self.entry.insert(0, self.tab.filepath)
-##			self.contents.edit_reset()
-##			try:
-##				line = self.tab.position
-##				self.contents.focus_set()
-##				self.contents.mark_set('insert', line)
-##				# ensure we see something before and after
-##				self.contents.see('%s - 2 lines' % line)
-##				self.update_idletasks()
-##				self.contents.see('%s + 2 lines' % line)
-##				
-##			except tkinter.TclError:
-##				self.tab.position = '1.0'
+##		try:
+##			line = self.tab.position
+##			self.contents.focus_set()
+##			self.contents.mark_set('insert', line)
+##			# ensure we see something before and after
+##			self.contents.see('%s - 2 lines' % line)
+##			self.update_idletasks()
+##			self.contents.see('%s + 2 lines' % line)
+##			
+##		except tkinter.TclError:
+##			self.tab.position = '1.0'
+##			
+##		self.contents.edit_reset()
 ##		
 ##		return 'break'
 
@@ -485,34 +497,45 @@ class Editor(tkinter.Toplevel):
 ##			return "break"
 ##			
 ##		self.tab.active = False
-##		self.save(self.tab)
-##		
+##
+##		if self.tab.type == 'normal':
+##			tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
+##			self.tab.contents = tmp
+##			
+##			try:
+##				pos = self.contents.index(tkinter.INSERT)
+##			except tkinter.TclError:
+##				pos = '1.0'
+##				
+##			self.tab.position = pos
+##
 ##		idx = self.tabs.index(self.tab)
 ##		if idx == len(self.tabs) - 1:
 ##			idx = -1
 ##		idx += 1
 ##		
 ##		self.tab = self.tabs[idx]
-##		self.filename = self.tab.filepath
+##		self.tab.active = True
 ##
 ##		self.contents.delete('1.0', tkinter.END)
 ##		self.entry.delete(0, tkinter.END)
 ##		
-##		if self.filename:
+##		if self.tab.type == 'normal':
 ##			self.contents.insert(tkinter.INSERT, self.tab.contents)
 ##			self.entry.insert(0, self.tab.filepath)
-##			self.contents.edit_reset()
-##			try:
-##				line = self.tab.position
-##				self.contents.focus_set()
-##				self.contents.mark_set('insert', line)
-##				# ensure we see something before and after
-##				self.contents.see('%s - 2 lines' % line)
-##				self.update_idletasks()
-##				self.contents.see('%s + 2 lines' % line)
-##				
-##			except tkinter.TclError:
-##				self.tab.position = '1.0'
+##		try:
+##			line = self.tab.position
+##			self.contents.focus_set()
+##			self.contents.mark_set('insert', line)
+##			# ensure we see something before and after
+##			self.contents.see('%s - 2 lines' % line)
+##			self.update_idletasks()
+##			self.contents.see('%s + 2 lines' % line)
+##			
+##		except tkinter.TclError:
+##			self.tab.position = '1.0'
+##
+##		self.contents.edit_reset()
 ##		
 ##		return 'break'
 
@@ -648,7 +671,6 @@ class Editor(tkinter.Toplevel):
 ##		
 ##		for tab in self.tabs:
 ##			if tab.active = True:
-##				self.filename = tab.filepath
 ##				self.tab = tab
 ##			
 ##			if tab.type == 'normal':
@@ -675,15 +697,13 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		self.contents.delete('1.0', tkinter.END)
 		
-##		if not self.filename and len(self.tabs) > 0:
-##			for tab in self.tabs: tab.active = False
+##		if not self.tab:
 ##			self.tab = self.tabs[0]
-##			self.filename = self.tab.filepath
 ##			self.tab.active = True
 ##			
-##		self.contents.insert(tkinter.INSERT, self.tab.contents)
-##		self.entry.insert(0, self.filename)
-##
+##		if self.tab.type == 'normal':
+##			self.contents.insert(tkinter.INSERT, self.tab.contents)
+##			self.entry.insert(0, self.filename)
 ##		try:
 ##			line = self.tab.position
 ##			self.contents.focus_set()
@@ -1088,7 +1108,7 @@ class Editor(tkinter.Toplevel):
 		try:
 			self.contents.edit_undo()
 		except tkinter.TclError:
-			self.contents.bell()
+			self.bell()
 			
 		return 'break'
 		
@@ -1101,7 +1121,7 @@ class Editor(tkinter.Toplevel):
 		try:
 			self.contents.edit_redo()
 		except tkinter.TclError:
-			self.contents.bell()
+			self.bell()
 			
 		return 'break'
 		
@@ -1333,6 +1353,38 @@ class Editor(tkinter.Toplevel):
 ##		'''
 ##		'''
 ##		
+##		if quitting:
+##			# update active tab first
+##			if self.tab.type == 'normal':
+##			
+##				try:
+##					pos = self.contents.index(tkinter.INSERT)
+##				except tkinter.TclError:
+##					pos = '1.0'
+##					
+##				tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
+##		
+##				# Check indent (tabify):
+##				tmp[:] = [self.tabify(line) for line in tmp]
+##				tmp = ''.join(tmp)[:-1]
+##		
+##				self.tab.position = pos
+##				self.tab.contents = tmp
+##			
+##			# then save tabs to disk
+##			for tab in self.tabs:
+##				if tab.type == 'normal':
+##					try:
+##						f = open(tab.filepath, 'w', encoding='utf-8')
+##					except OSError as e:
+##						print(e.__str__())
+##						print('\n Could not save file %s' % tab.filepath)
+##					else:
+##						f.write(tab.contents)
+##						f.close()
+##					
+##			return
+##
 ##		fpath_in_entry = self.entry.get().strip()
 ##		
 ##		if '/' not in fpath_in_entry:
@@ -1353,6 +1405,10 @@ class Editor(tkinter.Toplevel):
 ##		self.tab.contents = tmp
 ##
 ##		openfiles = [tab.filepath for tab in self.tabs]
+##		if not isinstance(fpath_in_entry, str) or fpath_in_entry.isspace() or '.py' not in fpath_in_entry or not fpath_in_entry[fpath_in_entry.index('.py')-1].isalnum():
+##			print('Give a valid filename')
+##			self.bell()
+##			return
 ##		
 ##		# creating new file
 ##		if fpath_in_entry != self.tab.filepath:
@@ -1586,6 +1642,8 @@ class Editor(tkinter.Toplevel):
 		
 		self.contents.delete('1.0', tkinter.END)
 ##		self.contents.insert(tkinter.INSERT, self.tab.contents)
+##		if self.tab.filepath:
+##			self.entry.insert(0, self.tab.filepath)
 ##		try:
 ##			line = self.tab.position
 ##			self.contents.focus_set()
