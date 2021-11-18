@@ -8,18 +8,17 @@
 ##		Theme Related
 ##		Overrides
 ##		Tab
+##		Load
 ##	
 ##	untabified areas:
-##		init
-##		Load
 ##		Run file Related
 
 
 
-# class for tab: name, filepath, active, position
-# rewrite load with pen and paper
+# deque() for tabs instead of list()? 
 # shortcut for: (do last search from cur pos, show next, select, exit)
-# 	because current search is not too useful  
+# 	because current search is not too useful
+#	ctrl-backspace, then easy to delete and ctrl-v and continue 
 # can't walk from newtab, must save it first
 # show i/num in title in normal state
 # check shortcuts
@@ -224,7 +223,7 @@ class Editor(tkinter.Toplevel):
 		self.popup.add_command(label="        help", command=self.help)
 		
 		self.entry = tkinter.Entry(self)
-		self.entry_return_bind_id = self.entry.bind("<Return>", self.load)
+		self.entry.bind("<Return>", self.load)
 		self.entry.pack(side=tkinter.LEFT, expand=True, fill=tkinter.X)
 		self.btn_open=tkinter.Button(self, text='Open', command=self.load)
 		self.btn_open.pack(side=tkinter.LEFT)
@@ -1198,8 +1197,75 @@ class Editor(tkinter.Toplevel):
 		tabified_line = ''.join([indent_string, line])
 		return tabified_line
 	
+	
+##	def load123(self, event=None):
+##
+##		if self.state != normal:
+##			self.bell()
+##			return
+##		
+##		# event is button
+##		if event == None:
+##			d = tkinter.filedialog.FileDialog(self)
+##			
+##			d.dirs.configure(font=self.font)
+##			d.files.configure(font=self.font)
+##			d.cancel_button.configure(font=self.menufont)
+##			d.filter.configure(font=self.menufont)
+##			d.filter_button.configure(font=self.menufont)
+##			d.ok_button.configure(font=self.menufont)
+##			d.selection.configure(font=self.menufont)
+##
+##			d.dirsbar.configure(width=self.scrollbar_width)
+##			d.filesbar.configure(width=self.scrollbar_width)
+##			d.filesbar.configure(elementborderwidth=self.elementborderwidth)
+##			d.dirsbar.configure(elementborderwidth=self.elementborderwidth)
+##			
+##			tmp = d.go('.', pattern='*.py')
+##			
+##		# event should then be Return
+##		else:
+##			tmp = self.entry.get().strip()
+##
+##		if not isinstance(tmp, str) or tmp.isspace() or '.py' not in tmp or not tmp[tmp.index('.py')-1].isalnum():
+##			self.bell()
+##			return
+##		
+##		# If trying to open from curdir without full path
+##		if '/' not in tmp:
+##			tmp = os.path.abspath('.') + '/' + tmp
+##			
+##		filename = tmp
+##		openfiles = [tab.filepath for tab in self.tabs]
+##		
+##		if filename in openfiles:
+##			print('file %s is already open' % filename)
+##			self.bell()
+##			return
+##		
+##		if not newtab:
+##			self.save()
+##		
+##		# Using same tab-instance:
+##		try:
+##			f = open(filename)
+##		except OSError as e:
+##			print(e.__str__())
+##			print('\n Could not open file %s' % filename)
+##		else:
+##			self.contents.delete('1.0', tkinter.END)
+##			self.entry.delete(0, tkinter.END)
+##			self.tab.filepath = filename
+##			self.tab.contents = f.read()
+##			self.tab.pos = '1.0'
+##			f.close()
+##			self.contents.insert(tkinter.INSERT, self.tab.contents)
+##			self.entry.insert(0, filename)
+##			self.contents.edit_reset()
+						
 
 	def load(self, event=None, no_such_file=False):
+	
 		tmp = self.entry.get().strip()
 		save = self.filename
 		asked = False
