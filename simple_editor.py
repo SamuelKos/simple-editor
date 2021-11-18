@@ -1223,11 +1223,15 @@ class Editor(tkinter.Toplevel):
 ##			
 ##			tmp = d.go('.', pattern='*.py')
 ##			
+##			# avoid bell when dialog is closed without selection
+##			if tmp == None:
+##				return
+##			
 ##		# event should then be Return
 ##		else:
 ##			tmp = self.entry.get().strip()
 ##
-##		if not isinstance(tmp, str) or tmp.isspace() or '.py' not in tmp or not tmp[tmp.index('.py')-1].isalnum():
+##		if not isinstance(tmp, str) or tmp.isspace() or '.py' not in tmp:
 ##			self.bell()
 ##			return
 ##		
@@ -1243,7 +1247,7 @@ class Editor(tkinter.Toplevel):
 ##			self.bell()
 ##			return
 ##		
-##		if not newtab:
+##		if self.tab.type == 'normal':
 ##			self.save()
 ##		
 ##		# Using same tab-instance:
@@ -1257,6 +1261,7 @@ class Editor(tkinter.Toplevel):
 ##			self.entry.delete(0, tkinter.END)
 ##			self.tab.filepath = filename
 ##			self.tab.contents = f.read()
+##			self.tab.type = 'normal
 ##			self.tab.pos = '1.0'
 ##			f.close()
 ##			self.contents.insert(tkinter.INSERT, self.tab.contents)
