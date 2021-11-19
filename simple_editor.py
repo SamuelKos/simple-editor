@@ -9,13 +9,11 @@
 ##		Overrides
 ##		Tab
 ##		Load
+##		Run file Related
 ##	
 ##	untabified areas:
-##		Run file Related
 
 
-
-# deque() for tabs instead of list()? 
 # shortcut for: (do last search from cur pos, show next, select, exit)
 # 	because current search is not too useful
 #	ctrl-backspace, then easy to delete and ctrl-v and continue 
@@ -26,26 +24,6 @@
 
 from collections import namedtuple
 Tab = namedtuple('Tab', 'active filepath contents position type')
-# Reason of import: want to serialize Tab-object
-# https://stackoverflow.com/questions/633402/what-is-serialization
-# https://stackoverflow.com/questions/1305532/convert-nested-python-dict-to-object
-
-# 1: Define new object and attributes:
-# Tab = namedtuple('Tab', 'active filepath contents position type')
-
-# 2: Create instance of this object:
-# tab = Tab(active=False, filepath='/af/af/af', contents='asdkfg\nsadf\n', position='1.2', type='normal')
-
-# 3: Convert object to string-representation with json (serialize)
-# which can then be saved to file etc:
-# dumped = json.dumps(tab._asdict())
-
-# 4: If we then have loaded this string-representation from a file
-# it must first be converted to dict with json (deserialize):
-# loaded = json.loads(dumped)
-
-# 5: Then we can use this dict to reinstantiate object:
-# loadedtab = Tab(**loaded)
 
 # from standard library
 import tkinter.scrolledtext
@@ -330,8 +308,10 @@ class Editor(tkinter.Toplevel):
 		if self.state != 'normal':
 			self.bell()
 			return "break"
-
-##		if self.tab.type == 'normal':
+			
+##	def new_tab(self, error=False, event=None):
+##	
+##		if self.tab.type == 'normal' and not error:
 ##			tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
 ##			self.tab.contents = tmp
 ##			
@@ -365,7 +345,7 @@ class Editor(tkinter.Toplevel):
 ##			return 'break'
 ##
 ##		if self.tab.type == 'normal':
-##			self.save()
+##			self.save(deltab=True)
 ##			
 ##		self.tabs.remove(self.tab)
 ##		self.contents.delete('1.0', tkinter.END)
@@ -934,6 +914,48 @@ class Editor(tkinter.Toplevel):
 		i = int(tagname.split("-")[1])
 		filepath, errline = self.errlines[i]
 		
+		###############
+##		openfiles = [tab.filepath for tab in self.tabs]
+##		
+##		if filepath == self.tab.filepath:
+##			continue
+##			
+##		elif filepath in openfiles:
+##			for tab in self.tabs:
+##				if tab.filepath == filepath:
+##					self.tab.active = False
+##					self.tab = tab
+##					self.tab.active = True
+##					break
+##		else:
+##			try:
+##				f = open(filepath, encoding='utf-8')
+##			except OSError as e:
+##				print(e.__str__())
+##				print('\n Could not open file %s' % filepath)
+##			else:
+##				self.new_tab(error=True)
+##				self.tab.filepath = filepath
+##				self.tab.contents = f.read()
+##				f.close()
+##				self.tab.type = 'normal'
+##		
+##		self.entry.delete(0, tkinter.END)
+##		self.entry.insert(0, self.tab.filepath)
+##		self.contents.delete('1.0', tkinter.END)
+##		self.contents.insert(tkinter.INSERT, self.tab.contents)
+##		self.contents.edit_reset()
+##		self.contents.focus_set()
+##		
+##		line = errline + '.0'
+##		# ensure we see something before and after
+##		self.contents.see('%s - 2 lines' % line)
+##		self.update_idletasks()
+##		self.contents.see('%s + 2 lines' % line)
+##		self.contents.mark_set('insert', line)
+##		self.bind("<Escape>", lambda e: self.iconify())
+		#################
+		
 		try:
 			f = open(filepath, encoding='utf-8')
 		except OSError as e:
@@ -992,11 +1014,15 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return
 			
-		res =  subprocess.run(['python', self.filename], text=True, capture_output=True)
+##		self.save(forced=True)
+##		res = subprocess.run(['python', self.tab.filepath], text=True, capture_output=True)
+		
+		res = subprocess.run(['python', self.filename], text=True, capture_output=True)
 		print(res.stdout)
 		
 		if res.returncode != 0:
 			self.bind("<Escape>", self.stop_show_errors)
+			self.state = 'error'
 			self.taglinks = dict()
 			self.errlines = list()
 			
@@ -1044,9 +1070,21 @@ class Editor(tkinter.Toplevel):
 		''' Show traceback from last run with added hyperlinks.
 		'''
 		
-		self.bind("<Escape>", self.stop_show_errors)
-
 		if len(self.errlines) != 0:
+			self.state = 'error'
+			self.bind("<Escape>", self.stop_show_errors)
+		
+##			if self.tab.type == 'normal':
+##				tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
+##				self.tab.contents = tmp
+##				
+##				try:
+##					pos = self.contents.index(tkinter.INSERT)
+##				except tkinter.TclError:
+##					pos = '1.0'
+##					
+##				self.tab.position = pos
+			
 			self.contents.delete('1.0', tkinter.END)
 			
 			i = 0
@@ -1066,7 +1104,11 @@ class Editor(tkinter.Toplevel):
 
 									
 	def stop_show_errors(self, event=None):
+		self.state = 'normal'
 		self.bind("<Escape>", lambda e: self.iconify())
+		
+##		self.contents.delete('1.0', tkinter.END)
+##		self.contents.insert(tkinter.INSERT, self.tab.contents)
 		
 		try:
 			f = open(self.filename, encoding='utf-8')
@@ -1261,7 +1303,7 @@ class Editor(tkinter.Toplevel):
 ##			self.entry.delete(0, tkinter.END)
 ##			self.tab.filepath = filename
 ##			self.tab.contents = f.read()
-##			self.tab.type = 'normal
+##			self.tab.type = 'normal'
 ##			self.tab.pos = '1.0'
 ##			f.close()
 ##			self.contents.insert(tkinter.INSERT, self.tab.contents)
@@ -1420,11 +1462,11 @@ class Editor(tkinter.Toplevel):
 							self.openfiles[self.filename].append('1.0')
 				
 	
-##	def save1233(self, quitting=False):
-##		'''
+##	def save1233(self, deltab=False, forced=False):
+##		''' forced when run( or quit_me(
 ##		'''
 ##		
-##		if quitting:
+##		if forced:
 ##			# update active tab first
 ##			if self.tab.type == 'normal':
 ##			
@@ -1456,6 +1498,8 @@ class Editor(tkinter.Toplevel):
 ##					
 ##			return
 ##
+##		# if not forced:
+##
 ##		fpath_in_entry = self.entry.get().strip()
 ##		
 ##		if '/' not in fpath_in_entry:
@@ -1476,7 +1520,7 @@ class Editor(tkinter.Toplevel):
 ##		self.tab.contents = tmp
 ##
 ##		openfiles = [tab.filepath for tab in self.tabs]
-##		if not isinstance(fpath_in_entry, str) or fpath_in_entry.isspace() or '.py' not in fpath_in_entry or not fpath_in_entry[fpath_in_entry.index('.py')-1].isalnum():
+##		if not isinstance(fpath_in_entry, str) or fpath_in_entry.isspace() or '.py' not in fpath_in_entry:
 ##			print('Give a valid filename')
 ##			self.bell()
 ##			return
@@ -1499,21 +1543,9 @@ class Editor(tkinter.Toplevel):
 ##					f.close()
 ##					self.tab.filepath = fpath_in_entry
 ##					self.tab.type = 'normal'
-##					
-##			# want to create new file with same contents, save old first:
+##
+##			# want to create new file with same contents:
 ##			else:
-##				try:
-##					f = open(self.tab.filepath, 'w', encoding='utf-8')
-##				except OSError as e:
-##					print(e.__str__())
-##					print('\n Could not save file %s' % self.tab.filepath)
-##					return
-##				else:
-##					f.write(tmp)
-##					f.close()
-##					self.tabs.remove(self.tab)
-##				
-##				# save newtab to disk some other time
 ##				self.new_tab()
 ##				self.tab.filepath = fpath_in_entry
 ##				self.tab.contents = tmp
@@ -1521,9 +1553,11 @@ class Editor(tkinter.Toplevel):
 ##				self.tab.type = 'normal'
 ##				
 ##		else:
-##			# saving existing file:
-##			if self.tab.type == 'newtab' or self.tab.active == False: return
-##			
+##			# skip unnecessary disk-writing silently
+##			if not deltab:
+##				return
+##
+##			# if closing tab:
 ##			try:
 ##				f = open(self.tab.filepath, 'w', encoding='utf-8')
 ##			except OSError as e:
@@ -1534,7 +1568,7 @@ class Editor(tkinter.Toplevel):
 ##				f.write(tmp)
 ##				f.close()
 
-		
+
 	def save(self, quitting=False):
 		tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
 				
