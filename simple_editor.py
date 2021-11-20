@@ -1,5 +1,5 @@
 #TODO:
-# tabindex --> tab
+
 #use this everywhere:
 
 ##try:
@@ -11,37 +11,13 @@
 ##	print('\n Could not save file %s' % fpath_in_entry)
 ##	return
 
-##	tabified areas:
-##		Config
-##		Search and Replace
-##		Indent and Comment
-##		Gotoline and Help
-##		Theme Related
-##		Overrides
-##		Tab
-##		Load
-##		Run file Related
-##	
-##	untabified areas:asd
-
 # shortcut for: (do last search from cur pos, show next, select, exit)
 # 	because current search is not too useful
 #	ctrl-backspace, then easy to delete and ctrl-v and continue 
-# can't walk from newtab, must save it first
 # show i/num in title in normal state
 # check shortcuts
 # check copy paste indentation problem
 
-class Tab:
-	def __init__(self, **entries):
-		self.active = True
-		self.filepath = None
-		self.contents = ''
-		self.position = '1.0'
-		self.type = 'newtab'
-		
-		self.__dict__.update(entries)
-	
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
@@ -53,12 +29,24 @@ import os
 
 # from current directory
 import changefont
-import tab
 
 # for executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
 
+class Tab:
+	'''	Represents a tab-page of an Editor-instance
+	'''
+	
+	def __init__(self, **entries):
+		self.active = True
+		self.filepath = None
+		self.contents = ''
+		self.position = '1.0'
+		self.type = 'newtab'
+		
+		self.__dict__.update(entries)
+	
 ###############################################################################
 # config(**options) Modifies one or more widget options. If no options are
 # given, method returns a dictionary containing all current option values.
@@ -288,6 +276,7 @@ class Editor(tkinter.Toplevel):
 		if self.randfont == True:
 			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
 		
+		# if no conf:
 		if self.tabindex == None:
 			newtab = Tab(active=True, filepath=None, contents='', position='1.0', type='newtab')
 			self.tabs.append(newtab)
@@ -311,8 +300,11 @@ class Editor(tkinter.Toplevel):
 ############## Tab Related Begin
 
 	def new_tab(self, event=None, error=False):
+		if self.state != 'normal':
+			self.bell()
+			return
 	
-		if self.tabindex and self.tabs[self.tabindex].type == 'normal' and not error:
+		if len(self.tabs) > 0  and not error:
 			tmp = self.contents.get('1.0', tkinter.END)
 			self.tabs[self.tabindex].contents = tmp
 			
@@ -327,13 +319,17 @@ class Editor(tkinter.Toplevel):
 		self.contents.delete('1.0', tkinter.END)
 		self.entry.delete(0, tkinter.END)
 		
-		if self.tabindex:
+		if len(self.tabs) > 0:
 			self.tabs[self.tabindex].active = False
 			
 		newtab = Tab(active=True, filepath=None, contents='', position='1.0', type='newtab')
-		self.tabs.append(newtab)
-		self.tabindex = -1
-		self.tabs[self.tabindex].active = True
+		
+		self.tabindex += 1
+		self.tabs.insert(self.tabindex, newtab)
+		
+		self.contents.focus_set()
+		self.contents.see('1.0')
+		self.contents.mark_set('insert', '1.0')
 		
 		return 'break'
 		
@@ -347,7 +343,7 @@ class Editor(tkinter.Toplevel):
 		if self.tabs[self.tabindex].type == 'normal':
 			self.save(deltab=True)
 			
-		self.tabs.remove(self.tabindex)
+		self.tabs.pop(self.tabindex)
 		self.contents.delete('1.0', tkinter.END)
 		self.entry.delete(0, tkinter.END)
 			
@@ -355,12 +351,13 @@ class Editor(tkinter.Toplevel):
 			newtab = Tab(active=True, filepath=None, contents='', position='1.0', type='newtab')
 			self.tabs.append(newtab)
 			
-		self.tabindex = -1
+		self.tabindex -= 1
 		self.tabs[self.tabindex].active = True
 
-		if self.tabs[self.tabindex].type == 'normal':
-			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
@@ -372,6 +369,9 @@ class Editor(tkinter.Toplevel):
 			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
+			self.contents.focus_set()
+			self.contents.see('1.0')
+			self.contents.mark_set('insert', '1.0')
 			
 		self.contents.edit_reset()
 		
@@ -385,17 +385,16 @@ class Editor(tkinter.Toplevel):
 			return "break"
 			
 		self.tabs[self.tabindex].active = False
-
-		if self.tabs[self.tabindex].type == 'normal':
-			tmp = self.contents.get('1.0', tkinter.END)
-			self.tabs[self.tabindex].contents = tmp
+		
+		tmp = self.contents.get('1.0', tkinter.END)
+		self.tabs[self.tabindex].contents = tmp
+		
+		try:
+			pos = self.contents.index(tkinter.INSERT)
+		except tkinter.TclError:
+			pos = '1.0'
 			
-			try:
-				pos = self.contents.index(tkinter.INSERT)
-			except tkinter.TclError:
-				pos = '1.0'
-				
-			self.tabs[self.tabindex].position = pos
+		self.tabs[self.tabindex].position = pos
 
 		idx = self.tabindex
 		if idx == len(self.tabs) - 1:
@@ -406,11 +405,11 @@ class Editor(tkinter.Toplevel):
 		self.tabs[self.tabindex].active = True
 
 		self.contents.delete('1.0', tkinter.END)
+		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.entry.delete(0, tkinter.END)
-		
-		if self.tabs[self.tabindex].type == 'normal':
-			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+		if self.tabs[self.tabindex].filepath:
 			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		
 		try:
 			line = self.tabs[self.tabindex].position
 			self.contents.focus_set()
@@ -422,7 +421,10 @@ class Editor(tkinter.Toplevel):
 			
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
-
+			self.contents.focus_set()
+			self.contents.see('1.0')
+			self.contents.mark_set('insert', '1.0')
+			
 		self.contents.edit_reset()
 		
 		return 'break'
@@ -492,10 +494,7 @@ class Editor(tkinter.Toplevel):
 
 		self.tabs = [ Tab(**item) for item in dictionary['tabs'] ]
 		
-		for i,tab in enumerate(self.tabs):
-			if tab.active == True:
-				self.tabindex = i
-			
+		for tab in self.tabs:
 			if tab.type == 'normal':
 				try:
 					f = open(tab.filepath)
@@ -505,7 +504,12 @@ class Editor(tkinter.Toplevel):
 				else:
 					tab.contents = f.read()
 					f.close()
-
+					
+		for i,tab in enumerate(self.tabs):
+			if tab.type == 'normal' and tab.active == True:
+				self.tabindex = i
+				break
+				
 
 	def apply_config(self):
 	
@@ -519,12 +523,9 @@ class Editor(tkinter.Toplevel):
 		self.popup.config(font=self.menufont)
 
 		if not self.tabindex:
-		
 			if len(self.tabs) == 0:
+				self.tabindex = -1
 				self.newtab()
-				
-			self.tabindex = -1
-			self.tabs[self.tabindex].active = True
 			
 		if self.tabs[self.tabindex].type == 'normal':
 			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -761,6 +762,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.see('%s + 2 lines' % line)
 		self.contents.mark_set('insert', line)
 		self.bind("<Escape>", lambda e: self.iconify())
+		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.state = 'normal'
 		
 
@@ -792,7 +794,9 @@ class Editor(tkinter.Toplevel):
 		
 		if res.returncode != 0:
 			self.bind("<Escape>", self.stop_show_errors)
+			self.bind("<Button-3>", self.do_nothing)
 			self.state = 'error'
+			
 			self.taglinks = dict()
 			self.errlines = list()
 			
@@ -841,9 +845,10 @@ class Editor(tkinter.Toplevel):
 		'''
 		
 		if len(self.errlines) != 0:
-			self.state = 'error'
 			self.bind("<Escape>", self.stop_show_errors)
-		
+			self.bind("<Button-3>", self.do_nothing)
+			self.state = 'error'
+			
 			if self.tabs[self.tabindex].type == 'normal':
 				tmp = self.contents.get('1.0', tkinter.END)
 				self.tabs[self.tabindex].contents = tmp
@@ -876,6 +881,7 @@ class Editor(tkinter.Toplevel):
 	def stop_show_errors(self, event=None):
 		self.state = 'normal'
 		self.bind("<Escape>", lambda e: self.iconify())
+		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -889,7 +895,6 @@ class Editor(tkinter.Toplevel):
 		self.update_idletasks()
 		self.contents.see('%s + 2 lines' % line)
 		self.contents.mark_set('insert', line)
-		self.bind("<Escape>", lambda e: self.iconify())
 		
 ########## Run file Related End
 ########## Overrides Begin
@@ -1064,7 +1069,7 @@ class Editor(tkinter.Toplevel):
 			# keyword argument deltab should be renamed
 			self.save(deltab=True)
 		
-		# Using same tab-instance:
+		# Using same tab:
 		try:
 			f = open(filename)
 		except OSError as e:
@@ -1078,7 +1083,13 @@ class Editor(tkinter.Toplevel):
 			self.tabs[self.tabindex].type = 'normal'
 			self.tabs[self.tabindex].position = '1.0'
 			f.close()
+			
 			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+			
+			self.contents.focus_set()
+			self.contents.see('1.0')
+			self.contents.mark_set('insert', '1.0')
+			
 			self.entry.insert(0, filename)
 			self.contents.edit_reset()
 			
@@ -1089,21 +1100,19 @@ class Editor(tkinter.Toplevel):
 		
 		if forced:
 			# update active tab first
-			if self.tabs[self.tabindex].type == 'normal':
-			
-				try:
-					pos = self.contents.index(tkinter.INSERT)
-				except tkinter.TclError:
-					pos = '1.0'
-					
-				tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
-		
-				# Check indent (tabify):
-				tmp[:] = [self.tabify(line) for line in tmp]
-				tmp = ''.join(tmp)[:-1]
-		
-				self.tabs[self.tabindex].position = pos
-				self.tabs[self.tabindex].contents = tmp
+			try:
+				pos = self.contents.index(tkinter.INSERT)
+			except tkinter.TclError:
+				pos = '1.0'
+				
+			tmp = self.contents.get('1.0', tkinter.END).splitlines(True)
+	
+			# Check indent (tabify):
+			tmp[:] = [self.tabify(line) for line in tmp]
+			tmp = ''.join(tmp)[:-1]
+	
+			self.tabs[self.tabindex].position = pos
+			self.tabs[self.tabindex].contents = tmp
 			
 			# then save tabs to disk
 			for tab in self.tabs:
