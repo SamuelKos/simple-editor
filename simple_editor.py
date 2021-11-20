@@ -350,8 +350,10 @@ class Editor(tkinter.Toplevel):
 		if (len(self.tabs) == 0):
 			newtab = Tab(active=True, filepath=None, contents='', position='1.0', type='newtab')
 			self.tabs.append(newtab)
-			
-		self.tabindex -= 1
+	
+		if self.tabindex > 0:
+			self.tabindex -= 1
+	
 		self.tabs[self.tabindex].active = True
 
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -526,6 +528,11 @@ class Editor(tkinter.Toplevel):
 			if len(self.tabs) == 0:
 				self.tabindex = -1
 				self.newtab()
+				
+			# only newtab(s) open:
+			else:
+				self.tabindex = 0
+				self.tabs[self.tabindex].active = True
 			
 		if self.tabs[self.tabindex].type == 'normal':
 			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -540,6 +547,9 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', line)
 		except tkinter.TclError:
 			self.tabs[self.tabindex].position = '1.0'
+			self.contents.focus_set()
+			self.contents.see('1.0')
+			self.contents.mark_set('insert', '1.0')
 		
 ########## Configuration Related End
 ########## Theme Related Begin
@@ -1110,7 +1120,7 @@ class Editor(tkinter.Toplevel):
 			# Check indent (tabify):
 			tmp[:] = [self.tabify(line) for line in tmp]
 			tmp = ''.join(tmp)[:-1]
-	
+			
 			self.tabs[self.tabindex].position = pos
 			self.tabs[self.tabindex].contents = tmp
 			
@@ -1125,6 +1135,8 @@ class Editor(tkinter.Toplevel):
 					else:
 						f.write(tab.contents)
 						f.close()
+				else:
+					tab.position = '1.0'
 					
 			return
 
