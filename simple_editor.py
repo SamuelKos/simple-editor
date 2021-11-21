@@ -1,20 +1,9 @@
 #TODO:
 
-#use this everywhere:
-
-##try:
-##	with open(fpath_in_entry, 'w', encoding='utf-8') as f:
-##		self.tabs[self.tabindex].filepath = fpath_in_entry
-##		self.tabs[self.tabindex].type = 'normal'
-##except EnvironmentError as e: 
-##	print(e.__str__())
-##	print('\n Could not save file %s' % fpath_in_entry)
-##	return
-
+# show i/num in title in normal state
 # shortcut for: (do last search from cur pos, show next, select, exit)
 # 	because current search is not too useful
 #	ctrl-backspace, then easy to delete and ctrl-v and continue 
-# show i/num in title in normal state
 # check shortcuts
 # check copy paste indentation problem
 
@@ -179,7 +168,7 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-s>", self.color_choose)
 		self.bind("<Control-n>", self.new_tab)
 		self.bind("<Control-d>", self.del_tab)
-		self.bind("<Alt_L>", self.show_debug)
+		self.bind("<Alt-l>", self.show_debug)
 		self.bind("<Control-w>", self.walk_files)
 		
 		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
@@ -274,17 +263,15 @@ class Editor(tkinter.Toplevel):
 		
 		# Try to apply saved configurations:
 		try:
-			f = open(CONFPATH)
+			with open(CONFPATH, 'r', encoding='utf-8') as f:
+				self.load_config(f)
+				self.randfont = False
 		except FileNotFoundError: pass
-		except OSError as e:
+		except EnvironmentError as e:
 			print(e.__str__())	# __str__() is for user (print to screen)
 			#print(e.__repr__())	# __repr__() is for developer (log to file)
 			print('\n Could not load existing configuration file %s' % CONFPATH)
-		else:
-			self.load_config(f)
-			self.randfont = False
-			f.close()
-
+			
 		if self.randfont == True:
 			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
 		
@@ -317,7 +304,17 @@ class Editor(tkinter.Toplevel):
 ############## Tab Related Begin
 
 	def new_tab(self, event=None, error=False):
-		if self.state != 'normal':
+		#print(
+		#event.char,
+		#event.keycode,
+		#event.keysym,
+		#event.keysym_num,
+		#event.num,
+		#event.type
+		#)
+		
+		# event == None when clicked hyper-link in tag_link()
+		if self.state != 'normal' and event != None:
 			self.bell()
 			return
 	
@@ -453,15 +450,13 @@ class Editor(tkinter.Toplevel):
 
 	def save_config(self, event=None):
 		try:
-			f = open(CONFPATH, 'w', encoding='utf-8')
-		except OSError as e:
+			with open(CONFPATH, 'w', encoding='utf-8') as f:
+				data = self.get_config()
+				string_representation = json.dumps(data)
+				f.write(string_representation)
+		except EnvironmentError as e:
 			print(e.__str__())
 			print('\nCould not save configuration')
-		else:
-			data = self.get_config()
-			string_representation = json.dumps(data)
-			f.write(string_representation)
-			f.close()
 
 	
 	def load_config(self, fileobject):
@@ -516,13 +511,12 @@ class Editor(tkinter.Toplevel):
 		for tab in self.tabs:
 			if tab.type == 'normal':
 				try:
-					f = open(tab.filepath)
-				except OSError as e:
+					with open(tab.filepath, 'r', encoding='utf-8') as f:
+						tab.contents = f.read()
+				except EnvironmentError as e:
 					print(e.__str__())
 					self.tabs.remove(tab)
-				else:
-					tab.contents = f.read()
-					f.close()
+					
 					
 		for i,tab in enumerate(self.tabs):
 			if tab.type == 'normal' and tab.active == True:
@@ -762,18 +756,17 @@ class Editor(tkinter.Toplevel):
 					break
 		else:
 			try:
-				f = open(filepath, encoding='utf-8')
-			except OSError as e:
+				with open(filepath, 'r', encoding='utf-8') as f:
+					self.new_tab(error=True)
+					self.tabs[self.tabindex].filepath = filepath
+					self.tabs[self.tabindex].contents = f.read()
+					self.tabs[self.tabindex].type = 'normal'
+			except EnvironmentError as e:
 				print(e.__str__())
 				print('\n Could not open file %s' % filepath)
 				self.bell()
 				return
-			else:
-				self.new_tab(error=True)
-				self.tabs[self.tabindex].filepath = filepath
-				self.tabs[self.tabindex].contents = f.read()
-				f.close()
-				self.tabs[self.tabindex].type = 'normal'
+
 		
 		self.entry.delete(0, tkinter.END)
 		self.entry.insert(0, self.tabs[self.tabindex].filepath)
@@ -876,16 +869,15 @@ class Editor(tkinter.Toplevel):
 			self.bind("<Button-3>", self.do_nothing)
 			self.state = 'error'
 			
-			if self.tabs[self.tabindex].type == 'normal':
-				tmp = self.contents.get('1.0', tkinter.END)
-				self.tabs[self.tabindex].contents = tmp
+			tmp = self.contents.get('1.0', tkinter.END)
+			self.tabs[self.tabindex].contents = tmp
+			
+			try:
+				pos = self.contents.index(tkinter.INSERT)
+			except tkinter.TclError:
+				pos = '1.0'
 				
-				try:
-					pos = self.contents.index(tkinter.INSERT)
-				except tkinter.TclError:
-					pos = '1.0'
-					
-				self.tabs[self.tabindex].position = pos
+			self.tabs[self.tabindex].position = pos
 			
 			self.contents.delete('1.0', tkinter.END)
 			
@@ -913,15 +905,19 @@ class Editor(tkinter.Toplevel):
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
 		self.entry.delete(0, tkinter.END)
-		self.entry.insert(0, self.tabs[self.tabindex].filepath)
+		
+		if self.tabs[self.tabindex].type == 'normal':
+			self.entry.insert(0, self.tabs[self.tabindex].filepath)
+			
 		self.contents.edit_reset()
 		self.contents.focus_set()
 
 		# ensure we see something before and after
+		pos = self.tabs[self.tabindex].position
 		self.contents.see('%s - 2 lines' % pos)
 		self.update_idletasks()
-		self.contents.see('%s + 2 lines' % line)
-		self.contents.mark_set('insert', line)
+		self.contents.see('%s + 2 lines' % pos)
+		self.contents.mark_set('insert', pos)
 		
 ########## Run file Related End
 ########## Overrides Begin
@@ -1098,27 +1094,23 @@ class Editor(tkinter.Toplevel):
 		
 		# Using same tab:
 		try:
-			f = open(filename)
-		except OSError as e:
+			with open(filename, 'r', encoding='utf-8') as f:
+				self.contents.delete('1.0', tkinter.END)
+				self.entry.delete(0, tkinter.END)
+				self.tabs[self.tabindex].filepath = filename
+				self.tabs[self.tabindex].contents = f.read()
+				self.tabs[self.tabindex].type = 'normal'
+				self.tabs[self.tabindex].position = '1.0'
+				
+				self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
+				self.contents.focus_set()
+				self.contents.see('1.0')
+				self.contents.mark_set('insert', '1.0')			
+				self.entry.insert(0, filename)
+				self.contents.edit_reset()
+		except EnvironmentError as e:
 			print(e.__str__())
 			print('\n Could not open file %s' % filename)
-		else:
-			self.contents.delete('1.0', tkinter.END)
-			self.entry.delete(0, tkinter.END)
-			self.tabs[self.tabindex].filepath = filename
-			self.tabs[self.tabindex].contents = f.read()
-			self.tabs[self.tabindex].type = 'normal'
-			self.tabs[self.tabindex].position = '1.0'
-			f.close()
-			
-			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
-			
-			self.contents.focus_set()
-			self.contents.see('1.0')
-			self.contents.mark_set('insert', '1.0')
-			
-			self.entry.insert(0, filename)
-			self.contents.edit_reset()
 			
 
 	def save(self, deltab=False, forced=False):
@@ -1145,13 +1137,11 @@ class Editor(tkinter.Toplevel):
 			for tab in self.tabs:
 				if tab.type == 'normal':
 					try:
-						f = open(tab.filepath, 'w', encoding='utf-8')
-					except OSError as e:
+						with open(tab.filepath, 'w', encoding='utf-8') as f:
+							f.write(tab.contents)
+					except EnvironmentError as e:
 						print(e.__str__())
 						print('\n Could not save file %s' % tab.filepath)
-					else:
-						f.write(tab.contents)
-						f.close()
 				else:
 					tab.position = '1.0'
 					
@@ -1236,14 +1226,12 @@ class Editor(tkinter.Toplevel):
 
 			# if closing tab or loading file:
 			try:
-				f = open(self.tabs[self.tabindex].filepath, 'w', encoding='utf-8')
-			except OSError as e:
+				with open(self.tabs[self.tabindex].filepath, 'w', encoding='utf-8') as f:
+					f.write(tmp)
+			except EnvironmentError as e:
 				print(e.__str__())
 				print('\n Could not save file %s' % self.tabs[self.tabindex].filepath)
 				return
-			else:
-				f.write(tmp)
-				f.close()
 	
 ########## Save and Load End
 ########## Gotoline and Help Begin
@@ -1265,8 +1253,8 @@ class Editor(tkinter.Toplevel):
 	def stop_gotoline(self, event=None):
 		self.entry.bind("<Return>", self.load)
 		self.bind("<Escape>", lambda e: self.iconify())
-		self.entry.delete(0,tkinter.END)
-		self.entry.insert(0,self.filename)
+		self.entry.delete(0, tkinter.END)
+		self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		self.title(self.titletext)
 		
 	
@@ -1568,12 +1556,12 @@ class Editor(tkinter.Toplevel):
 		self.btn_open.config(state='normal')
 		self.btn_save.config(state='normal')
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
+		self.bind("<Escape>", lambda e: self.iconify())
 		self.contents.tag_remove('match', '1.0', tkinter.END)
 		self.contents.tag_remove('found', '1.0', tkinter.END)
 		self.entry.bind("<Return>", self.load)
-		self.bind("<Escape>", lambda e: self.iconify())
 		self.entry.delete(0, tkinter.END)
-		self.entry.insert(0, self.filename)
+		self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		self.new_word = ''
 		self.old_word = ''
 		self.search_matches = 0
