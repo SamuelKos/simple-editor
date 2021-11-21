@@ -68,10 +68,11 @@ HELPTEXT = '''		Keyboard shortcuts:
 		Ctrl-R  Replace all
 		Ctrl-g  Gotoline
 				
+		Shift-Tab  Unindent
+		Tab        Indent
+		
 		Ctrl-C  Comment
 		Ctrl-X  Uncomment
-		Ctrl->  Indent
-		Ctrl-<  Unindent
 		
 		Ctrl-a  Select all
 		Ctrl-c  Copy
@@ -94,16 +95,53 @@ HELPTEXT = '''		Keyboard shortcuts:
 		Alt-n  Next match
 		Alt-p  Prev match
 		
-		Is my file Saved? It is when:
-		- closing program, also configurations
-		- closing tab
-		- creating a new tab
-		- changing tabs (walking)
-		- pressing save-button:
-			If a file was already open and user changed filename in entry,
-			old file is first saved and then new file with same content
-			is created in current tab. Old file is closed from opened tabs.
-		- it also should be saved when loading file
+		
+	When is my file Saved to Disk?
+	
+		All tabs are saved to disk when:
+		  - closing program, also configurations
+		  - running file
+		
+		Current tab is saved to disk when:
+		  - closing tab, if it had filename.
+			Newtabs get filename by pressing save.
+		  
+		  - opening file from disk when there already was another file opened
+			in tab.
+		
+		Otherwise, changes are saved in memory
+		
+		This means that if you want to cancel all changes:
+		  - do not run file
+		  - do not close editor
+		  - do not close tab with a filename
+		  - do not open file in a tab which has already a file opened
+		  
+		  - instead close python-console with ctrl-d
+		
+
+	About save-button:
+	  - To create a new file, add filename to entry and press save.
+		It will be saved to disk in above mentioned situations.
+	  
+	  - If a file was already open and user changed filename in entry,
+		old file is first saved (but not to disk) and then new file with
+		same content is created in a new tab (it is not yet in disk).
+	  
+	  - Pressing save in tab which exists in disk does not do anything.
+	  - Contents of tabs without filename are not saved when closing tab,
+		or program, but tabs are still kept as placeholders.
+			
+		
+	About Open-button:
+	  - When in tab without filename, files can be opened from entry
+		or by pressing button.
+	  
+	  - If tab had filename and user changed filename in entry,
+		old file is first saved to disk and closed, then filepath in
+		entry is opened in the same tab.
+		
+	  - If entered filename in entry and pressed open, entry is ignored.
 		  
 		'''
 
@@ -179,12 +217,11 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Return>", self.return_override)
 		self.contents.bind("<Control-C>", self.comment)
 		self.contents.bind("<Control-X>", self.uncomment)
-		self.contents.bind("<Control-greater>", self.indent)
-		self.contents.bind("<Control-less>", self.unindent)
+		self.contents.bind("<Tab>", self.tab_override)
+		self.contents.bind("<ISO_Left_Tab>", self.unindent)
 		self.contents.bind("<Control-a>", self.select_all)
 		self.contents.bind("<Control-z>", self.undo_override)
 		self.contents.bind("<Control-Z>", self.redo_override)
-		
 		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
 		
 		bindtags = self.contents.bindtags()
@@ -304,15 +341,7 @@ class Editor(tkinter.Toplevel):
 ############## Tab Related Begin
 
 	def new_tab(self, event=None, error=False):
-		#print(
-		#event.char,
-		#event.keycode,
-		#event.keysym,
-		#event.keysym_num,
-		#event.num,
-		#event.type
-		#)
-		
+
 		# event == None when clicked hyper-link in tag_link()
 		if self.state != 'normal' and event != None:
 			self.bell()
@@ -970,6 +999,18 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_remove('sel', '1.0', tkinter.END)
 		self.contents.tag_add('sel', 1.0, tkinter.END)
 		return "break"
+		
+		
+	def tab_override(self, event):
+		'''	Used to bind Tab-key with indent()
+		'''
+		try:
+			tmp = self.contents.selection_get()
+			self.indent()
+			return 'break'
+			
+		except tkinter.TclError:
+			return
 
 
 	def return_override(self, event):
@@ -1066,6 +1107,9 @@ class Editor(tkinter.Toplevel):
 			
 			# avoid bell when dialog is closed without selection
 			if tmp == None:
+				self.entry.delete(0, tkinter.END)
+				if self.tabs[self.tabindex].filepath != None:
+					self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				return
 			
 		# event should then be Return
@@ -1086,6 +1130,10 @@ class Editor(tkinter.Toplevel):
 		if filename in openfiles:
 			print('file %s is already open' % filename)
 			self.bell()
+			self.entry.delete(0, tkinter.END)
+			
+			if self.tabs[self.tabindex].filepath != None:
+				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			return
 		
 		if self.tabs[self.tabindex].type == 'normal':
@@ -1095,10 +1143,10 @@ class Editor(tkinter.Toplevel):
 		# Using same tab:
 		try:
 			with open(filename, 'r', encoding='utf-8') as f:
+				self.tabs[self.tabindex].contents = f.read()
 				self.contents.delete('1.0', tkinter.END)
 				self.entry.delete(0, tkinter.END)
 				self.tabs[self.tabindex].filepath = filename
-				self.tabs[self.tabindex].contents = f.read()
 				self.tabs[self.tabindex].type = 'normal'
 				self.tabs[self.tabindex].position = '1.0'
 				
@@ -1111,6 +1159,10 @@ class Editor(tkinter.Toplevel):
 		except EnvironmentError as e:
 			print(e.__str__())
 			print('\n Could not open file %s' % filename)
+			self.entry.delete(0, tkinter.END)
+			
+			if self.tabs[self.tabindex].filepath != None:
+				self.entry.insert(0, self.tabs[self.tabindex].filepath)
 			
 
 	def save(self, deltab=False, forced=False):
@@ -1176,11 +1228,15 @@ class Editor(tkinter.Toplevel):
 			return
 		
 		# creating new file
-		if fpath_in_entry != self.tabs[self.tabindex].filepath:
+		if fpath_in_entry != self.tabs[self.tabindex].filepath and not deltab:
 		
 			if fpath_in_entry in openfiles:
 				self.bell()
 				print('\nFile %s already opened' % fpath_in_entry)
+				self.entry.delete(0, tkinter.END)
+			
+				if self.tabs[self.tabindex].filepath != None:
+					self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				return
 			
 			if self.tabs[self.tabindex].type == 'newtab':
@@ -1193,10 +1249,26 @@ class Editor(tkinter.Toplevel):
 				except EnvironmentError as e: 
 					print(e.__str__())
 					print('\n Could not save file %s' % fpath_in_entry)
+					self.entry.delete(0, tkinter.END)
+			
+					if self.tabs[self.tabindex].filepath != None:
+						self.entry.insert(0, self.tabs[self.tabindex].filepath)
 					return
 
 			# want to create new file with same contents:
 			else:
+				try:
+					with open(fpath_in_entry, 'w', encoding='utf-8') as f:
+						pass
+				except EnvironmentError as e: 
+					print(e.__str__())
+					print('\n Could not save file %s' % fpath_in_entry)
+					self.entry.delete(0, tkinter.END)
+			
+					if self.tabs[self.tabindex].filepath != None:
+						self.entry.insert(0, self.tabs[self.tabindex].filepath)
+					return
+					
 				self.new_tab()
 				self.tabs[self.tabindex].filepath = fpath_in_entry
 				self.tabs[self.tabindex].contents = tmp
