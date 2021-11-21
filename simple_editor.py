@@ -46,6 +46,17 @@ class Tab:
 		self.type = 'newtab'
 		
 		self.__dict__.update(entries)
+		
+		
+	def __str__(self):
+	
+		return	'\nfilepath: %s\nactive: %s\ntype: %s\nposition: %s' % (
+				str(self.filepath),
+				str(self.active),
+				self.type,
+				self.position
+				)
+				
 	
 ###############################################################################
 # config(**options) Modifies one or more widget options. If no options are
@@ -168,6 +179,7 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-s>", self.color_choose)
 		self.bind("<Control-n>", self.new_tab)
 		self.bind("<Control-d>", self.del_tab)
+		self.bind("<Alt_L>", self.show_debug)
 		self.bind("<Control-w>", self.walk_files)
 		
 		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
@@ -278,9 +290,8 @@ class Editor(tkinter.Toplevel):
 		
 		# if no conf:
 		if self.tabindex == None:
-			newtab = Tab(active=True, filepath=None, contents='', position='1.0', type='newtab')
-			self.tabs.append(newtab)
-			self.tabindex = 0
+			self.tabindex = -1
+			self.new_tab()
 
 		############################# init End ######################
 		
@@ -295,7 +306,13 @@ class Editor(tkinter.Toplevel):
 		self.save_config()
 		self.quit()
 		self.destroy()
-
+		
+		
+	def show_debug(self, event=None):
+		tmptop = tkinter.Toplevel()
+		tmptop.title('Show Debug')
+		tmptop.label = tkinter.Label(tmptop, text='LABEL', font=('TkDefaultFont', 16))
+		tmptop.label.pack()
 
 ############## Tab Related Begin
 
@@ -524,10 +541,10 @@ class Editor(tkinter.Toplevel):
 		self.btn_save.config(font=self.menufont)
 		self.popup.config(font=self.menufont)
 
-		if not self.tabindex:
+		if self.tabindex == None:
 			if len(self.tabs) == 0:
 				self.tabindex = -1
-				self.newtab()
+				self.new_tab()
 				
 			# only newtab(s) open:
 			else:
