@@ -1,7 +1,7 @@
 # simple-editor
 GUI-editor for Python development. 
 Tested to work with Debian Buster and Bullseye. 
-* Update: planned to add debug window.
+* Update: show current tab-position in title
 
 # Featuring
 * Auto-indent

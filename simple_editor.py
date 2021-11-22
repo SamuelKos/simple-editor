@@ -1,11 +1,10 @@
 #TODO:
 
-# show i/num in title in normal state
+# check copy paste indentation problem
 # shortcut for: (do last search from cur pos, show next, select, exit)
 # 	because current search is not too useful
 #	ctrl-backspace, then easy to delete and ctrl-v and continue 
 # check shortcuts
-# check copy paste indentation problem
 
 # from standard library
 import tkinter.scrolledtext
@@ -152,10 +151,9 @@ class Editor(tkinter.Toplevel):
 		self.root = tkinter.Tk().withdraw()
 		super().__init__(self.root, class_='Simple Editor')
 		self.protocol("WM_DELETE_WINDOW", self.quit_me)
-		self.titletext = 'Simple Editor'
-		self.title(self.titletext)
 		self.tabs = list()
 		self.tabindex = None
+		self.titlepattern = 'Simple Editor %d/%d'
 		
 		self.bgdaycolor = r'#D3D7CF'
 		self.fgdaycolor = r'#000000'
@@ -316,6 +314,8 @@ class Editor(tkinter.Toplevel):
 		if self.tabindex == None:
 			self.tabindex = -1
 			self.new_tab()
+			
+		self.title(self.titlepattern % (self.tabindex + 1, len(self.tabs)))
 
 		############################# init End ######################
 		
@@ -349,7 +349,8 @@ class Editor(tkinter.Toplevel):
 	
 		if len(self.tabs) > 0  and not error:
 			tmp = self.contents.get('1.0', tkinter.END)
-			self.tabs[self.tabindex].contents = tmp
+			# [:-1]: remove unwanted extra newline
+			self.tabs[self.tabindex].contents = tmp[:-1]
 			
 			try:
 				pos = self.contents.index(tkinter.INSERT)
@@ -373,6 +374,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.focus_set()
 		self.contents.see('1.0')
 		self.contents.mark_set('insert', '1.0')
+		
+		self.title(self.titlepattern % (self.tabindex + 1, len(self.tabs)))
 		
 		return 'break'
 		
@@ -419,6 +422,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', '1.0')
 			
 		self.contents.edit_reset()
+		self.title(self.titlepattern % (self.tabindex + 1, len(self.tabs)))
 		
 		return 'break'
 
@@ -432,7 +436,8 @@ class Editor(tkinter.Toplevel):
 		self.tabs[self.tabindex].active = False
 		
 		tmp = self.contents.get('1.0', tkinter.END)
-		self.tabs[self.tabindex].contents = tmp
+		# [:-1]: remove unwanted extra newline
+		self.tabs[self.tabindex].contents = tmp[:-1]
 		
 		try:
 			pos = self.contents.index(tkinter.INSERT)
@@ -471,6 +476,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.mark_set('insert', '1.0')
 			
 		self.contents.edit_reset()
+		self.title(self.titlepattern % (self.tabindex + 1, len(self.tabs)))
 		
 		return 'break'
 
@@ -548,7 +554,7 @@ class Editor(tkinter.Toplevel):
 					
 					
 		for i,tab in enumerate(self.tabs):
-			if tab.type == 'normal' and tab.active == True:
+			if tab.active == True:
 				self.tabindex = i
 				break
 				
@@ -568,11 +574,6 @@ class Editor(tkinter.Toplevel):
 			if len(self.tabs) == 0:
 				self.tabindex = -1
 				self.new_tab()
-				
-			# only newtab(s) open:
-			else:
-				self.tabindex = 0
-				self.tabs[self.tabindex].active = True
 			
 		if self.tabs[self.tabindex].type == 'normal':
 			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -813,6 +814,7 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Escape>", lambda e: self.iconify())
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.state = 'normal'
+		self.title(self.titlepattern % (self.tabindex + 1, len(self.tabs)))
 		
 
 	def run(self):
@@ -899,7 +901,8 @@ class Editor(tkinter.Toplevel):
 			self.state = 'error'
 			
 			tmp = self.contents.get('1.0', tkinter.END)
-			self.tabs[self.tabindex].contents = tmp
+			# [:-1]: remove unwanted extra newline
+			self.tabs[self.tabindex].contents = tmp[:-1]
 			
 			try:
 				pos = self.contents.index(tkinter.INSERT)
@@ -1166,7 +1169,8 @@ class Editor(tkinter.Toplevel):
 			
 
 	def save(self, deltab=False, forced=False):
-		''' forced when run( or quit_me(
+		''' forced when run() or quit_me()
+			deltab==True from load() and del_tab()
 		'''
 		
 		if forced:
@@ -1327,7 +1331,7 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Escape>", lambda e: self.iconify())
 		self.entry.delete(0, tkinter.END)
 		self.entry.insert(0, self.tabs[self.tabindex].filepath)
-		self.title(self.titletext)
+		self.title(self.titlepattern % (self.tabindex + 1, len(self.tabs)))
 		
 	
 	def gotoline(self, event=None):
@@ -1381,9 +1385,12 @@ class Editor(tkinter.Toplevel):
 			pos = self.contents.index(tkinter.INSERT)
 		except tkinter.TclError:
 			pos = '1.0'
-		self.tabs[self.tabindex].position = pos
-		self.tabs[self.tabindex].contents = self.contents.get('1.0', tkinter.END)
 		
+		self.tabs[self.tabindex].position = pos
+		tmp = self.contents.get('1.0', tkinter.END)
+		# [:-1]: remove unwanted extra newline
+		self.tabs[self.tabindex].contents = tmp[:-1]
+			
 		self.entry.delete(0, tkinter.END)
 		self.contents.delete('1.0', tkinter.END)
 		self.contents.insert(tkinter.INSERT, self.helptxt)
@@ -1638,7 +1645,7 @@ class Editor(tkinter.Toplevel):
 		self.old_word = ''
 		self.search_matches = 0
 		self.replace_overlap_index = None
-		self.title(self.titletext)
+		self.title(self.titlepattern % (self.tabindex + 1, len(self.tabs)))
 		self.state = 'normal'
 		self.contents.focus_set()
 
@@ -1773,3 +1780,5 @@ class Editor(tkinter.Toplevel):
 
 
 ################ Replace End
+
+
