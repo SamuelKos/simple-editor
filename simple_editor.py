@@ -1,11 +1,10 @@
 #TODO:
 
-# check copy paste indentation problem
 # shortcut for: (do last search from cur pos, show next, select, exit)
 # 	because current search is not too useful
 #	ctrl-backspace, then easy to delete and ctrl-v and continue 
 # check shortcuts
-
+		
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
@@ -141,6 +140,16 @@ HELPTEXT = '''		Keyboard shortcuts:
 		entry is opened in the same tab.
 		
 	  - If entered filename in entry and pressed open, entry is ignored.
+	
+	
+	How to copy-paste code-blocks in editor:
+	  - When copying, select additional empty line before block.
+		This ensures indentation of whole block. If you do not do this,
+		and select for example from 'def' - word, which has indentation,
+		then indentation of this first line is wrong when pasted, compared
+		to other lines. But editor moves cursor at the start of block so
+		you can start fixing indenting that function definition line or
+		similar. 
 		  
 		'''
 
@@ -207,7 +216,7 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Alt-l>", self.show_debug)
 		self.bind("<Control-w>", self.walk_files)
 		
-		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, tabstyle='wordprocessor', undo=True, maxundo=-1, autoseparators=True)
+		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, undo=True, maxundo=-1, autoseparators=True)#tabstyle='wordprocessor'
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
@@ -220,6 +229,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-a>", self.select_all)
 		self.contents.bind("<Control-z>", self.undo_override)
 		self.contents.bind("<Control-Z>", self.redo_override)
+		self.contents.bind("<Control-v>", self.paste)
 		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
 		
 		bindtags = self.contents.bindtags()
@@ -328,6 +338,7 @@ class Editor(tkinter.Toplevel):
 	def quit_me(self):
 		self.save(forced=True)
 		self.save_config()
+		self.clipboard_clear()
 		self.quit()
 		self.destroy()
 		
@@ -965,11 +976,34 @@ class Editor(tkinter.Toplevel):
 	
 
 	def copy(self):
-		self.popup_whohasfocus.event_generate('<<Copy>>')
-
-
-	def paste(self):
-		self.popup_whohasfocus.event_generate('<<Paste>>')
+		''' When copy is selected from popup-menu
+		'''
+		self.clipboard_clear()
+		self.clipboard_append(self.selection_get())
+		
+		
+	def paste(self, event=None):
+		'''	Keeping original behaviour, in which indentation is preserved
+			but first line usually is in wrong place after paste
+			because of selection has not started at the beginning of the line.
+			So we put cursor at the beginning of insertion after pasting it
+			so we can start indenting it. This problem can be avoided by
+			starting copying of a block at the empty line before first line of
+			the block.
+		'''
+		tmp = self.clipboard_get().splitlines(True)
+		
+		if len(tmp) > 1:
+			pos = self.contents.index(tkinter.INSERT)
+			self.contents.event_generate('<<Paste>>')
+			self.contents.mark_set('insert', pos)
+			return 'break'		
+		else:
+			if event == None:
+				self.popup_whohasfocus.event_generate('<<Paste>>')
+				return 'break'
+			else:
+				return
 
 
 	def undo_override(self, event=None):
@@ -1009,14 +1043,16 @@ class Editor(tkinter.Toplevel):
 		'''
 		try:
 			tmp = self.contents.selection_get()
-			self.indent()
-			return 'break'
+			self.indent(event)
 			
 		except tkinter.TclError:
-			return
+			self.contents.insert(tkinter.INSERT, '\t')
+		
+		return 'break'
 
 
 	def return_override(self, event):
+	
 		# Cursor indexes when pressed return:
 		line, row = map(int, self.contents.index(tkinter.INSERT).split('.'))			
 		# is same as:
@@ -1409,7 +1445,6 @@ class Editor(tkinter.Toplevel):
 	def indent(self, event=None):
 		if self.state != 'normal':
 			self.bell()
-			return "break"
 			
 		try:
 			startline = int(self.contents.index(tkinter.SEL_FIRST).split(sep='.')[0])
@@ -1417,11 +1452,15 @@ class Editor(tkinter.Toplevel):
 			for linenum in range(startline, endline+1):
 				self.contents.mark_set(tkinter.INSERT, '%s.0' % linenum)
 				self.contents.insert(tkinter.INSERT, '\t')
+			
 			self.contents.edit_separator()
-		except tkinter.TclError as e:
-			print(e)
-		return "break"
-		
+			
+		except tkinter.TclError:
+			if event == None:
+				pass
+			else:
+				raise
+			
 
 	def unindent(self, event=None):
 		if self.state != 'normal':
@@ -1451,7 +1490,8 @@ class Editor(tkinter.Toplevel):
 				self.contents.edit_separator()
 		
 		except tkinter.TclError as e:
-			print(e)
+			pass
+			
 		return "break"
 
 	
@@ -1469,11 +1509,12 @@ class Editor(tkinter.Toplevel):
 				self.contents.insert(tkinter.INSERT, '##')
 			
 			self.contents.edit_separator()
+			return "break"
 		
 		except tkinter.TclError as e:
 			print(e)
-		return "break"
-
+			return "break"
+	
 
 	def uncomment(self, event=None):
 		'''should work even if there are uncommented lines between commented lines'''
