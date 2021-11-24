@@ -1,6 +1,7 @@
 # simple-editor
 GUI-editor for Python development. 
 Tested to work with Debian Bullseye. 
+* Update: added useful search_next-function
 
 # Featuring
 * Auto-indent

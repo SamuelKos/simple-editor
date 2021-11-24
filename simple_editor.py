@@ -1,8 +1,5 @@
 #TODO:
 
-# shortcut for: (do last search from cur pos, show next, select, exit)
-# 	because current search is not too useful
-#	ctrl-backspace, then easy to delete and ctrl-v and continue 
 # check shortcuts
 		
 # from standard library
@@ -61,6 +58,7 @@ ICONPATH = r"./icons/editor.png"
 CONFPATH = r"./editor.cnf"
 HELPTEXT = '''		Keyboard shortcuts:
 
+		Ctrl-BackSpace  Search next
 		Ctrl-f  Search
 		Ctrl-r  Replace
 		Ctrl-R  Replace all
@@ -230,6 +228,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-z>", self.undo_override)
 		self.contents.bind("<Control-Z>", self.redo_override)
 		self.contents.bind("<Control-v>", self.paste)
+		self.contents.bind("<Control-BackSpace>", self.search_next)
 		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
 		
 		bindtags = self.contents.bindtags()
@@ -346,7 +345,7 @@ class Editor(tkinter.Toplevel):
 	def show_debug(self, event=None):
 		tmptop = tkinter.Toplevel()
 		tmptop.title('Show Debug')
-		tmptop.label = tkinter.Label(tmptop, text='LABEL', font=('TkDefaultFont', 16))
+		tmptop.label = tkinter.Label(tmptop, text='not implemented'.upper(), font=('TkDefaultFont', 16))
 		tmptop.label.pack()
 
 ############## Tab Related Begin
@@ -1546,6 +1545,55 @@ class Editor(tkinter.Toplevel):
 ########## Indent and Comment End
 ################ Search Begin
 
+	def search_next(self, event=None):
+		'''	Do last search from cursor position, show and select next match.
+			
+			This is for cases when you can not do replace ALL.
+			You need to choose when to insert AND insertion is not always
+			the same. But replace is too limited (can not insert, like in search).
+			So you do normal search and quit quickly. Then copy your insertion
+			'pattern' in clipboard, what you add to certain matches and then
+			maybe change something else, or you need sometimes delete match and
+			insert your clipboard 'pattern' etc...
+			
+			In short:
+			1: Do normal search
+			2: copy what you need to have in clipboard
+			3: ctrl-backspace until in right place
+			4: now easy to delete or add clipboard contents etc..
+			5: repeat 3-4
+			
+			shortcut: ctrl-backspace
+		'''
+		
+		if self.state != 'normal' or self.old_word == '':
+			self.bell()
+			return "break"
+		
+		wordlen = len(self.old_word)
+		pos = self.contents.search(self.old_word, tkinter.INSERT, tkinter.END)
+		
+		# Try again from the beginning this time:
+		if not pos:
+			pos = self.contents.search(self.old_word, '1.0', tkinter.END)
+			
+			# no oldword in file:
+			if not pos:
+				self.bell()
+				return "break"
+		
+		lastpos = "%s + %dc" % (pos, wordlen)
+		self.contents.tag_remove('sel', '1.0', tkinter.END)
+		self.contents.tag_add('sel', pos, lastpos)
+		self.contents.mark_set('insert', lastpos)
+		
+		self.contents.see('%s - 2 lines' % pos)
+		self.update_idletasks()
+		self.contents.see('%s + 2 lines' % pos)
+		
+		return "break"
+
+
 	def show_next(self, event=None):
 		self.contents.config(state='normal')
 		
@@ -1683,7 +1731,6 @@ class Editor(tkinter.Toplevel):
 		self.entry.delete(0, tkinter.END)
 		self.entry.insert(0, self.tabs[self.tabindex].filepath)
 		self.new_word = ''
-		self.old_word = ''
 		self.search_matches = 0
 		self.replace_overlap_index = None
 		self.title(self.titlepattern % (self.tabindex + 1, len(self.tabs)))
