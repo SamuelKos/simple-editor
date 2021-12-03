@@ -9,7 +9,9 @@ import tkinter.font
 import tkinter
 import random
 import json
+import copy
 import os
+
 
 # from current directory
 import changefont
@@ -264,17 +266,20 @@ class Editor(tkinter.Toplevel):
 					'Noto Mono',
 					'Bitstream Vera Sans Mono',
 					'Liberation Mono',
-					'Inconsolata'
+					'Inconsolata',
+					'Courier 10 Pitch',
+					'DejaVu Sans Mono'
 					]
 		
 		self.badfonts = [
 					'Standard Symbols PS',
 					'OpenSymbol',
-					'Noto Color Emoji',	# This one is really bad, causes segfault and hard crash (killed by OS)
+					'Noto Color Emoji',
 					'FontAwesome',
 					'Droid Sans Fallback',
 					'D050000L'
 					]
+					
 					
 		fontfamilies = [f for f in tkinter.font.families() if f not in self.badfonts]
 		random.shuffle(fontfamilies)
@@ -553,6 +558,11 @@ class Editor(tkinter.Toplevel):
 
 		self.tabs = [ Tab(**item) for item in dictionary['tabs'] ]
 		
+		# To be able to update self.tabs we need this copy.
+		# I think it is because for loop silently 'breaks'
+		# if we remove items from the container we are iterating.
+		tmp = copy.copy(self.tabs)
+		
 		for tab in self.tabs:
 			if tab.type == 'normal':
 				try:
@@ -560,8 +570,9 @@ class Editor(tkinter.Toplevel):
 						tab.contents = f.read()
 				except EnvironmentError as e:
 					print(e.__str__())
-					self.tabs.remove(tab)
+					tmp.remove(tab)
 					
+		self.tabs = tmp
 					
 		for i,tab in enumerate(self.tabs):
 			if tab.active == True:
@@ -584,6 +595,10 @@ class Editor(tkinter.Toplevel):
 			if len(self.tabs) == 0:
 				self.tabindex = -1
 				self.new_tab()
+			# recently active normal tab is gone:
+			else:
+				self.tabindex = 0
+				self.tabs[self.tabindex].active = True 
 			
 		if self.tabs[self.tabindex].type == 'normal':
 			self.contents.insert(tkinter.INSERT, self.tabs[self.tabindex].contents)
@@ -1455,8 +1470,10 @@ class Editor(tkinter.Toplevel):
 			self.contents.edit_separator()
 			
 		except tkinter.TclError:
+			# from popup
 			if event == None:
 				pass
+			# enable insert tab by raising to tab_override()
 			else:
 				raise
 			
