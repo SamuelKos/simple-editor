@@ -1,7 +1,8 @@
 #TODO:
 
+# make pip package
 # check shortcuts
-		
+
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
@@ -216,7 +217,7 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Alt-l>", self.show_debug)
 		self.bind("<Control-w>", self.walk_files)
 		
-		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, undo=True, maxundo=-1, autoseparators=True)#tabstyle='wordprocessor'
+		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor')
 		
 		self.contents.tag_config('match', background='lightyellow', foreground='black')
 		self.contents.tag_config('found', background='lightgreen')
@@ -865,7 +866,10 @@ class Editor(tkinter.Toplevel):
 			return
 			
 		self.save(forced=True)
+		
+		# https://docs.python.org/3/library/subprocess.html		
 		res = subprocess.run(['python', self.tabs[self.tabindex].filepath], text=True, capture_output=True)
+		
 		print(res.stdout)
 		
 		if res.returncode != 0:
@@ -885,7 +889,6 @@ class Editor(tkinter.Toplevel):
 			self.err = res.stderr.splitlines()
 			
 			for line in self.err:
-				print(line)
 				tmp = line
 
 				tagname = "hyper-%s" % len(self.errlines)
@@ -1058,11 +1061,10 @@ class Editor(tkinter.Toplevel):
 		try:
 			tmp = self.contents.selection_get()
 			self.indent(event)
+			return 'break'
 			
 		except tkinter.TclError:
-			self.contents.insert(tkinter.INSERT, '\t')
-		
-		return 'break'
+			return
 
 
 	def return_override(self, event):
@@ -1470,12 +1472,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.edit_separator()
 			
 		except tkinter.TclError:
-			# from popup
-			if event == None:
-				pass
-			# enable insert tab by raising to tab_override()
-			else:
-				raise
+			pass
 			
 
 	def unindent(self, event=None):
