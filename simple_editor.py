@@ -1,13 +1,41 @@
-#TODO:
+############ Stucture briefing Begin
+
+# Stucture briefing
+# TODO
+# Imports
+# Class Tab
+
+####################
+# Class Editor Begin
+#
+# Constants
+# Tab Related
+# Configuration Related
+# Theme Related
+# Run file Related 
+# Overrides
+# Save and Load
+# Gotoline and Help
+# Indent and Comment
+# Search
+# Replace
+#
+# Class Editor End
+
+############ Stucture briefing End
+############ TODO Begin
 
 # make pip package
-# check shortcuts
+
+############ TODO End
+############ Imports Begin
 
 # from standard library
 import tkinter.scrolledtext
 import tkinter.filedialog
 import tkinter.font
 import tkinter
+import pathlib
 import random
 import json
 import copy
@@ -20,6 +48,9 @@ import changefont
 # for executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
 import subprocess
+
+############ Imports End
+############ Class Tab Begin
 
 class Tab:
 	'''	Represents a tab-page of an Editor-instance
@@ -44,7 +75,9 @@ class Tab:
 				self.position
 				)
 				
-	
+############ Class Tab End
+############ Class Editor Begin
+
 ###############################################################################
 # config(**options) Modifies one or more widget options. If no options are
 # given, method returns a dictionary containing all current option values.
@@ -57,102 +90,37 @@ class Tab:
 # or completely different language like Tcl to name one. 
 ###############################################################################
 
-ICONPATH = r"./icons/editor.png"
-CONFPATH = r"./editor.cnf"
-HELPTEXT = '''		Keyboard shortcuts:
+############ Constants Begin
+# YES you can do:
+# somepath = pathlib.Path('/a/b/c.txt')
+# print('path is: %s' % somepath) # etc.. So it is usable, only that it is not out of the box serializeable
 
-		Ctrl-BackSpace  Search next
-		Ctrl-f  Search
-		Ctrl-r  Replace
-		Ctrl-R  Replace all
-		Ctrl-g  Gotoline
-				
-		Shift-Tab  Unindent
-		Tab        Indent
-		
-		Ctrl-C  Comment
-		Ctrl-X  Uncomment
-		
-		Ctrl-a  Select all
-		Ctrl-c  Copy
-		Ctrl-v  Paste
-		Ctrl-z  Undo
-		Ctrl-Z  Redo
-		
-		Ctrl-p  Font setting
-		Ctrl-s  Color setting
-		Ctrl-t  Toggle color setting
-		
-		Ctrl-n  Open new tab
-		Ctrl-d  Close current tab
-		Ctrl-w  Walk tabs
-		
-		Ctrl-plus 	Increase scrollbar-width
-		Ctrl-minus	Decrease scrollbar-width
+ICONPATH = pathlib.Path.cwd() / 'icons' / 'editor.png'
+CONFPATH = pathlib.Path.cwd() / 'editor.cnf'
+HELPPATH = pathlib.Path.cwd() / 'help.txt'
 
-		While searching:
-		Alt-n  Next match
-		Alt-p  Prev match
-		
-		
-	When is my file Saved to Disk?
-	
-		All tabs are saved to disk when:
-		  - closing program, also configurations
-		  - running file
-		
-		Current tab is saved to disk when:
-		  - closing tab, if it had filename.
-			Newtabs get filename by pressing save.
-		  
-		  - opening file from disk when there already was another file opened
-			in tab.
-		
-		Otherwise, changes are saved in memory
-		
-		This means that if you want to cancel all changes:
-		  - do not run file
-		  - do not close editor
-		  - do not close tab with a filename
-		  - do not open file in a tab which has already a file opened
-		  
-		  - instead close python-console with ctrl-d
-		
+TAB_WIDTH = 4
+TAB_WIDTH_CHAR = ' '
 
-	About save-button:
-	  - To create a new file, add filename to entry and press save.
-		It will be saved to disk in above mentioned situations.
-	  
-	  - If a file was already open and user changed filename in entry,
-		old file is first saved (but not to disk) and then new file with
-		same content is created in a new tab (it is not yet in disk).
-	  
-	  - Pressing save in tab which exists in disk does not do anything.
-	  - Contents of tabs without filename are not saved when closing tab,
-		or program, but tabs are still kept as placeholders.
+GOODFONTS = frozenset([
+			'Noto Mono',
+			'Bitstream Vera Sans Mono',
+			'Liberation Mono',
+			'Inconsolata',
+			'Courier 10 Pitch',
+			'DejaVu Sans Mono'
+			])
+		
+BADFONTS = frozenset([
+			'Standard Symbols PS',
+			'OpenSymbol',
+			'Noto Color Emoji',
+			'FontAwesome',
+			'Droid Sans Fallback',
+			'D050000L'
+			])
 			
-		
-	About Open-button:
-	  - When in tab without filename, files can be opened from entry
-		or by pressing button.
-	  
-	  - If tab had filename and user changed filename in entry,
-		old file is first saved to disk and closed, then filepath in
-		entry is opened in the same tab.
-		
-	  - If entered filename in entry and pressed open, entry is ignored.
-	
-	
-	How to copy-paste code-blocks in editor:
-	  - When copying, select additional empty line before block.
-		This ensures indentation of whole block. If you do not do this,
-		and select for example from 'def' - word, which has indentation,
-		then indentation of this first line is wrong when pasted, compared
-		to other lines. But editor moves cursor at the start of block so
-		you can start fixing indenting that function definition line or
-		similar. 
-		  
-		'''
+############ Constants End
 
 			
 class Editor(tkinter.Toplevel):
@@ -182,25 +150,24 @@ class Editor(tkinter.Toplevel):
 		self.errlines = list()
 		self.state = 'normal'
 		
-		if ICONPATH:
+		if ICONPATH.exists():
 			try:
+				# I was really surprised that init of Image
+				# accepts pathlib.Path-object.
 				self.pic = tkinter.Image("photo", file=ICONPATH)
 				self.tk.call('wm','iconphoto', self._w, self.pic)
 			except tkinter.TclError as e:
 				print(e)
 		
-		self.helptxt = HELPTEXT
+		self.helptxt = HELPPATH.read_text()
 		
 		# Layout Begin:
 		####################################################
 		# IMPORTANT if binding to 'root': 
 		# https://stackoverflow.com/questions/54185434/python-tkinter-override-default-ctrl-h-binding
-		# Found this when wondering what is happening when ctrl-t was used.
-		# It did the callback but also something unwanted..
-		# https://unix.stackexchange.com/questions/330414/intended-use-of-ctrlt-in-bash
 		# https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/binding-levels.html
-		# I use this with ctrl-t after self.contents is packed below.
-		# But with ctrl-U this did not work, so changed to ctrl-X
+		# Still problems with this, so changed back to default bindtags.
+		# If you can, avoid binding to root.
 		 
 		self.bind("<Control-minus>", self.decrease_scrollbar_width)
 		self.bind("<Control-plus>", self.increase_scrollbar_width)
@@ -213,9 +180,8 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-p>", self.font_choose)
 		self.bind("<Control-s>", self.color_choose)
 		self.bind("<Control-n>", self.new_tab)
-		self.bind("<Control-d>", self.del_tab)
-		self.bind("<Alt-l>", self.show_debug)
-		self.bind("<Control-w>", self.walk_files)
+		self.bind("<Alt-t>", self.toggle_color)
+		self.bind("<Alt-w>", self.walk_files)
 		
 		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor')
 		
@@ -223,6 +189,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.tag_config('found', background='lightgreen')
 		
 		self.contents.bind("<Return>", self.return_override)
+		self.contents.bind("<Control-d>", self.del_tab)
 		self.contents.bind("<Control-C>", self.comment)
 		self.contents.bind("<Control-X>", self.uncomment)
 		self.contents.bind("<Tab>", self.tab_override)
@@ -234,9 +201,8 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-BackSpace>", self.search_next)
 		self.contents.pack(side=tkinter.BOTTOM, expand=True, fill=tkinter.BOTH)
 		
-		bindtags = self.contents.bindtags()
-		self.contents.bindtags((bindtags[2], bindtags[0], bindtags[1], bindtags[3]))
-		self.bind("<Control-t>", self.toggle_color)
+		# Needed in leave() taglink in: Run file Related
+		self.name_of_cursor_in_text_widget = self.contents['cursor']
 		
 		self.popup_whohasfocus = None
 		self.popup = tkinter.Menu(self, tearoff=0, bd=0, activeborderwidth=0)
@@ -261,38 +227,19 @@ class Editor(tkinter.Toplevel):
 		
 		# Set Font Begin ##################################################
 		self.fontname = None
-		self.randfont = False
-		
-		self.goodfonts = [
-					'Noto Mono',
-					'Bitstream Vera Sans Mono',
-					'Liberation Mono',
-					'Inconsolata',
-					'Courier 10 Pitch',
-					'DejaVu Sans Mono'
-					]
-		
-		self.badfonts = [
-					'Standard Symbols PS',
-					'OpenSymbol',
-					'Noto Color Emoji',
-					'FontAwesome',
-					'Droid Sans Fallback',
-					'D050000L'
-					]
+		randfont = False
 					
-					
-		fontfamilies = [f for f in tkinter.font.families() if f not in self.badfonts]
+		fontfamilies = [f for f in tkinter.font.families() if f not in BADFONTS]
 		random.shuffle(fontfamilies)
 		
-		for fontname in self.goodfonts:
+		for fontname in GOODFONTS:
 			if fontname in fontfamilies:
 				self.fontname = fontname
 				break
 		
 		if self.fontname == None: 
 			self.fontname = fontfamilies[0]
-			self.randfont = True
+			randfont = True
 		
 		# Initialize rest of configurables
 		self.font = tkinter.font.Font(family=self.fontname, size=12)
@@ -302,7 +249,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.vbar.config(width=self.scrollbar_width)
 		self.contents.vbar.config(elementborderwidth=self.elementborderwidth)
 		
-		self.tab_width = self.font.measure(4*' ') #############################
+		self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
 		self.contents.config(font=self.font, foreground=self.fgcolor,
 			background=self.bgcolor, insertbackground=self.fgcolor, 
 			tabs=(self.tab_width, ))
@@ -315,14 +262,14 @@ class Editor(tkinter.Toplevel):
 		try:
 			with open(CONFPATH, 'r', encoding='utf-8') as f:
 				self.load_config(f)
-				self.randfont = False
+				randfont = False
 		except FileNotFoundError: pass
 		except EnvironmentError as e:
 			print(e.__str__())	# __str__() is for user (print to screen)
 			#print(e.__repr__())	# __repr__() is for developer (log to file)
 			print('\n Could not load existing configuration file %s' % CONFPATH)
 			
-		if self.randfont == True:
+		if randfont == True:
 			print(f'WARNING: RANDOM FONT NAMED "{self.fontname.upper()}" IN USE. Select a better font with: ctrl-p')
 		
 		# if no conf:
@@ -534,7 +481,9 @@ class Editor(tkinter.Toplevel):
 		
 		for tab in self.tabs:
 			tab.contents = ''
-			
+			if tab.filepath:
+				# convert tab.filepath to relative path and to string for serialization
+				tab.filepath = tab.filepath.relative_to(tab.filepath.cwd()).__str__()
 		tmplist = [ tab.__dict__ for tab in self.tabs ]
 		dictionary['tabs'] = tmplist
 		
@@ -566,6 +515,8 @@ class Editor(tkinter.Toplevel):
 		
 		for tab in self.tabs:
 			if tab.type == 'normal':
+				tab.filepath = pathlib.Path.cwd() / tab.filepath
+				
 				try:
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
 						tab.contents = f.read()
@@ -583,7 +534,7 @@ class Editor(tkinter.Toplevel):
 
 	def apply_config(self):
 	
-		self.tab_width = self.font.measure(4*' ') #############################
+		self.tab_width = self.font.measure(TAB_WIDTH * TAB_WIDTH_CHAR)
 		self.contents.config(font=self.font, foreground=self.fgcolor,
 			background=self.bgcolor, insertbackground=self.fgcolor, 
 			tabs=(self.tab_width, ))
@@ -775,7 +726,7 @@ class Editor(tkinter.Toplevel):
 	def leave(self, tagname, event=None):
 		''' Used in error-page, when mousecursor leaves hyperlink tagname.
 		'''
-		self.contents.config(cursor="")
+		self.contents.config(cursor=self.name_of_cursor_in_text_widget)
 		self.contents.tag_config(tagname, underline=0)
 
 
@@ -797,6 +748,8 @@ class Editor(tkinter.Toplevel):
 		
 		i = int(tagname.split("-")[1])
 		filepath, errline = self.errlines[i]
+		
+		filepath = pathlib.Path(filepath)
 		
 		openfiles = [tab.filepath for tab in self.tabs]
 		
@@ -841,7 +794,7 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Button-3>", lambda event: self.raise_popup(event))
 		self.state = 'normal'
 		self.title(self.titlepattern % (self.tabindex + 1, len(self.tabs)))
-		
+
 
 	def run(self):
 		'''	Run file currently being edited. This can not catch errlines of
@@ -867,12 +820,17 @@ class Editor(tkinter.Toplevel):
 			
 		self.save(forced=True)
 		
-		# https://docs.python.org/3/library/subprocess.html		
-		res = subprocess.run(['python', self.tabs[self.tabindex].filepath], text=True, capture_output=True)
+		# https://docs.python.org/3/library/subprocess.html
+
+		res = subprocess.run(['python', self.tabs[self.tabindex].filepath], stderr=subprocess.PIPE).stderr
 		
-		print(res.stdout)
+		err = res.decode()
 		
-		if res.returncode != 0:
+		#res = subprocess.run(['python', self.tabs[self.tabindex].filepath], text=True, capture_output=True)
+		
+		#print(res.stdout)
+		
+		if len(err) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
 			self.bind("<Button-3>", self.do_nothing)
 			self.state = 'error'
@@ -886,7 +844,7 @@ class Editor(tkinter.Toplevel):
 				if 'hyper' in tag:
 					self.contents.tag_delete(tag)
 				
-			self.err = res.stderr.splitlines()
+			self.err = err.splitlines()
 			
 			for line in self.err:
 				tmp = line
@@ -1064,6 +1022,7 @@ class Editor(tkinter.Toplevel):
 			return 'break'
 			
 		except tkinter.TclError:
+			# No selection, continue to next bindtag 
 			return
 
 
@@ -1158,6 +1117,7 @@ class Editor(tkinter.Toplevel):
 			d.filesbar.configure(elementborderwidth=self.elementborderwidth)
 			d.dirsbar.configure(elementborderwidth=self.elementborderwidth)
 			
+			# tmp is now absolute path
 			tmp = d.go('.', pattern='*.py')
 			
 			# avoid bell when dialog is closed without selection
@@ -1175,11 +1135,8 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return
 		
-		# If trying to open from curdir without full path
-		if '/' not in tmp:
-			tmp = os.path.abspath('.') + '/' + tmp
-			
-		filename = tmp
+		filename = pathlib.Path().cwd() / tmp
+		
 		openfiles = [tab.filepath for tab in self.tabs]
 		
 		if filename in openfiles:
@@ -1257,10 +1214,14 @@ class Editor(tkinter.Toplevel):
 
 		# if not forced:
 
-		fpath_in_entry = self.entry.get().strip()
+		tmp = self.entry.get().strip()
 		
-		if '/' not in fpath_in_entry:
-				fpath_in_entry = os.path.abspath('.') + '/' + fpath_in_entry
+		if not isinstance(tmp, str) or tmp.isspace() or '.py' not in tmp:
+			print('Give a valid filename')
+			self.bell()
+			return
+		
+		fpath_in_entry = pathlib.Path().cwd() / tmp
 		
 		try:
 			pos = self.contents.index(tkinter.INSERT)
@@ -1272,16 +1233,11 @@ class Editor(tkinter.Toplevel):
 		# Check indent (tabify):
 		tmp[:] = [self.tabify(line) for line in tmp]
 		tmp = ''.join(tmp)[:-1]
-
+		
 		self.tabs[self.tabindex].position = pos
 		self.tabs[self.tabindex].contents = tmp
 
 		openfiles = [tab.filepath for tab in self.tabs]
-		
-		if not isinstance(fpath_in_entry, str) or fpath_in_entry.isspace() or '.py' not in fpath_in_entry:
-			print('Give a valid filename')
-			self.bell()
-			return
 		
 		# creating new file
 		if fpath_in_entry != self.tabs[self.tabindex].filepath and not deltab:
@@ -1289,6 +1245,15 @@ class Editor(tkinter.Toplevel):
 			if fpath_in_entry in openfiles:
 				self.bell()
 				print('\nFile %s already opened' % fpath_in_entry)
+				self.entry.delete(0, tkinter.END)
+			
+				if self.tabs[self.tabindex].filepath != None:
+					self.entry.insert(0, self.tabs[self.tabindex].filepath)
+				return
+				
+			if fpath_in_entry.exists():
+				self.bell()
+				print('\nCan not overwrite %s' % fpath_in_entry)
 				self.entry.delete(0, tkinter.END)
 			
 				if self.tabs[self.tabindex].filepath != None:
@@ -1717,7 +1682,7 @@ class Editor(tkinter.Toplevel):
 			self.contents.config(state='disabled')
 			self.bind("<Button-3>", self.do_nothing)
 			
-			if self.state == 'normal':
+			if self.state == 'search':
 				self.title('Found: %s matches' % str(self.search_matches))
 				self.bind("<Alt-n>", self.show_next)
 				self.bind("<Alt-p>", self.show_prev)
@@ -1757,7 +1722,7 @@ class Editor(tkinter.Toplevel):
 			self.bell()
 			return "break"
 			
-		self.state = 'normal'
+		self.state = 'search'
 		self.btn_open.config(state='disabled')
 		self.btn_save.config(state='disabled')
 		self.entry.bind("<Return>", self.start_search)
@@ -1882,5 +1847,6 @@ class Editor(tkinter.Toplevel):
 
 
 ################ Replace End
+########### Class Editor End
 
 
