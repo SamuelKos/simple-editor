@@ -1,0 +1,107 @@
+		Keyboard shortcuts:
+
+		Ctrl-BackSpace  Search next
+		Ctrl-f  Search
+		Ctrl-r  Replace
+		Ctrl-R  Replace all
+		Ctrl-g  Gotoline
+				
+		Shift-Tab  Unindent
+		Tab        Indent
+		
+		Ctrl-C  Comment
+		Ctrl-X  Uncomment
+		
+		Ctrl-a  Select all
+		Ctrl-c  Copy
+		Ctrl-v  Paste
+		Ctrl-z  Undo
+		Ctrl-Z  Redo
+		
+		Ctrl-p  Font setting
+		Ctrl-s  Color setting
+		Alt-t   Toggle color setting
+		
+		Ctrl-n  Open new tab
+		Ctrl-d  Close current tab
+		Alt-w   Walk tabs
+		
+		Ctrl-plus 	Increase scrollbar-width
+		Ctrl-minus	Decrease scrollbar-width
+
+		While searching:
+		Alt-n  Next match
+		Alt-p  Prev match
+		
+		
+	When is my file Saved to Disk?
+	
+		All tabs are saved to disk when:
+		  - closing program, also configurations
+		  - running file
+		
+		Current tab is saved to disk when:
+		  - closing tab, if it had filename.
+			Newtabs get filename by pressing save.
+		  
+		  - opening file from disk when there already was another file opened
+			in tab.
+		
+		Otherwise, changes are saved in memory
+		
+		This means that if you want to cancel all changes:
+		  - do not run file
+		  - do not close editor
+		  - do not close tab with a filename
+		  - do not open file in a tab which has already a file opened
+		  
+		  - instead close python-console with ctrl-d
+		
+
+	About save-button:
+	  - To create a new file, add filename to entry and press save.
+		It will be saved to disk in above mentioned situations.
+	  
+	  - If a file was already open and user changed filename in entry,
+		old file is first saved (but not to disk) and then new file with
+		same content is created in a new tab (it is not yet in disk).
+	  
+	  - Pressing save in tab which exists in disk does not do anything.
+	  - Contents of tabs without filename are not saved when closing tab,
+		or program, but tabs are still kept as placeholders.
+			
+		
+	About Open-button:
+	  - When in tab without filename, files can be opened from entry
+		or by pressing button.
+	  
+	  - If tab had filename and user changed filename in entry,
+		old file is first saved to disk and closed, then filepath in
+		entry is opened in the same tab.
+		
+	  - If entered filename in entry and pressed open, entry is ignored.
+	
+	
+	How to copy-paste code-blocks in editor:
+	  - When copying, select additional empty line before block.
+		This ensures indentation of whole block. If you do not do this,
+		and select for example from 'def' - word, which has indentation,
+		then indentation of this first line is wrong when pasted, compared
+		to other lines. But editor moves cursor at the start of block so
+		you can start fixing indenting that function definition line or
+		similar.
+		
+	About running file
+	  - input from stdin does not work, so use test-data for that.
+	  
+	  - Editor freezes when running a program. So if you are testing
+		for possible runtime-errors, keep that in mind. You should
+		be able to terminate your program with ctrl-c from python-console.
+	
+	  - If you know where in your code that runtime-error occurs, put
+		breakpoint() there, exit editor and python-console and run from terminal:
+		
+		python3 program_with_error.py
+		
+		and it will exit to python debugger after your breakpoint.
+		

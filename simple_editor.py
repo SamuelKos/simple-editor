@@ -87,14 +87,16 @@ class Tab:
 #
 # If you are about to use tkinter Python-module, consider
 # using some other GUI-library like Qt, GTK
-# or completely different language like Tcl to name one. 
+# or completely different language like Tcl to name one.
+# This is also one option https://www.wxwidgets.org/
 ###############################################################################
 
 ############ Constants Begin
 # YES you can do:
 # somepath = pathlib.Path('/a/b/c.txt')
-# print('path is: %s' % somepath) # etc.. So it is usable, only that it is not out of the box serializeable
+# print('path is: %s' % somepath) # etc.. So it is usable.
 
+# Interesting syntax, but good choise I think:
 ICONPATH = pathlib.Path.cwd() / 'icons' / 'editor.png'
 CONFPATH = pathlib.Path.cwd() / 'editor.cnf'
 HELPPATH = pathlib.Path.cwd() / 'help.txt'
@@ -152,8 +154,6 @@ class Editor(tkinter.Toplevel):
 		
 		if ICONPATH.exists():
 			try:
-				# I was really surprised that init of Image
-				# accepts pathlib.Path-object.
 				self.pic = tkinter.Image("photo", file=ICONPATH)
 				self.tk.call('wm','iconphoto', self._w, self.pic)
 			except tkinter.TclError as e:
@@ -293,13 +293,6 @@ class Editor(tkinter.Toplevel):
 		self.clipboard_clear()
 		self.quit()
 		self.destroy()
-		
-		
-	def show_debug(self, event=None):
-		tmptop = tkinter.Toplevel()
-		tmptop.title('Show Debug')
-		tmptop.label = tkinter.Label(tmptop, text='not implemented'.upper(), font=('TkDefaultFont', 16))
-		tmptop.label.pack()
 
 ############## Tab Related Begin
 
@@ -826,10 +819,6 @@ class Editor(tkinter.Toplevel):
 		
 		err = res.decode()
 		
-		#res = subprocess.run(['python', self.tabs[self.tabindex].filepath], text=True, capture_output=True)
-		
-		#print(res.stdout)
-		
 		if len(err) != 0:
 			self.bind("<Escape>", self.stop_show_errors)
 			self.bind("<Button-3>", self.do_nothing)
@@ -1086,8 +1075,8 @@ class Editor(tkinter.Toplevel):
 				count = 0
 				continue
 			if char == ' ': count += 1
-			if count == 4:
-				indent_string = indent_string.replace(4*' ', '\t', True)
+			if count == TAB_WIDTH:
+				indent_string = indent_string.replace(TAB_WIDTH * ' ', '\t', True)
 				count = 0
 		
 		tabified_line = ''.join([indent_string, line])
@@ -1253,7 +1242,7 @@ class Editor(tkinter.Toplevel):
 				
 			if fpath_in_entry.exists():
 				self.bell()
-				print('\nCan not overwrite %s' % fpath_in_entry)
+				print('\nCan not overwrite file: %s' % fpath_in_entry)
 				self.entry.delete(0, tkinter.END)
 			
 				if self.tabs[self.tabindex].filepath != None:
