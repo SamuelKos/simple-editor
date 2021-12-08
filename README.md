@@ -2,8 +2,7 @@
 GUI-editor for Python development. 
 Tested to work with Debian Bullseye. 
 * Walk-tabs is now Alt-tab instead of Ctrl-tab. Toggle theme is now Alt-t.
-* Filepaths are now saved to disk as relative paths so more flexibility if for example editing in different environments etc.
-* They are also changed to pathlib.Path-objects so this might work in Windows, have not tested it yet.
+* Windows support plan is dumped because of strange differences in behaviour in tkinter.. 
 
 # Featuring
 * Auto-indent

@@ -104,14 +104,15 @@ HELPPATH = pathlib.Path.cwd() / 'help.txt'
 TAB_WIDTH = 4
 TAB_WIDTH_CHAR = ' '
 
-GOODFONTS = frozenset([
+# This is list because order matters, best ones at the start etc..
+GOODFONTS = [
 			'Noto Mono',
 			'Bitstream Vera Sans Mono',
 			'Liberation Mono',
 			'Inconsolata',
 			'Courier 10 Pitch',
 			'DejaVu Sans Mono'
-			])
+			]
 		
 BADFONTS = frozenset([
 			'Standard Symbols PS',
@@ -237,7 +238,7 @@ class Editor(tkinter.Toplevel):
 				self.fontname = fontname
 				break
 		
-		if self.fontname == None: 
+		if self.fontname == None:
 			self.fontname = fontfamilies[0]
 			randfont = True
 		
