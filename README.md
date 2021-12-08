@@ -1,11 +1,9 @@
 # simple-editor
 GUI-editor for Python development. 
 Tested to work with Debian Bullseye. 
-* walk-tabs is now Alt-tab instead of Ctrl-tab.
+* Walk-tabs is now Alt-tab instead of Ctrl-tab. Toggle theme is now Alt-t.
 * Filepaths are now saved to disk as relative paths so more flexibility if for example editing in different environments etc.
 * They are also changed to pathlib.Path-objects so this might work in Windows, have not tested it yet.
-* Because changes in save(), current state might be unsafe
-* Other fixes
 
 # Featuring
 * Auto-indent
