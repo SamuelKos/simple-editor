@@ -1,8 +1,7 @@
 # simple-editor
 GUI-editor for Python development. 
-Tested to work with Debian Bullseye. 
-* Walk-tabs is now Alt-tab instead of Ctrl-tab. Toggle theme is now Alt-t.
-* Windows support plan has raised again, now that I managed to setup Microsoft's own virtual machine image for win7. I previously tried with Wine with strange behaviour (it was related to tkinter.Tk().withdraw() positioning), can not say where was the problem, anyway, it is now gone and I can now test in Windows.
+Tested to work with Debian Bullseye and Windows 7
+* Initially tested to work with Windows 7
 
 # Featuring
 * Auto-indent

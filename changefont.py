@@ -10,14 +10,58 @@ class FontChooser(tkinter.Toplevel):
 		super().__init__(self.root)
 		self.title('Choose Font')
 		self.fonts = fontlist
-		self.badfonts = [
+		self.badfonts = frozenset([
 					'Standard Symbols PS',
 					'OpenSymbol',
 					'Noto Color Emoji',
 					'FontAwesome',
 					'Droid Sans Fallback',
-					'D050000L'
-					]
+					'D050000L',
+					'Webdings',
+					'Wingdings',
+					'Symbol',
+					'Cambria Math',
+					'Batang',
+					'BatangChe',
+					'Dotum',
+					'DotumChe',
+					'Gulim',
+					'GulimChe',
+					'Gungsuh',
+					'GungsuhChe',
+					'MS Gothic',
+					'MS Mincho',
+					'MS PGothic',
+					'MS PMincho',
+					'MS UI Gothic',
+					'Malgun Gothic',
+					'Meiryo',
+					'Meiryo UI',
+					'@Batang',
+					'@BatangChe',
+					'@Dotum',
+					'@DotumChe',
+					'@Gulim',
+					'@GulimChe',
+					'@Gungsuh',
+					'@GungsuhChe',
+					'@MS Gothic',
+					'@MS Mincho',
+					'@MS PGothic',
+					'@MS PMincho',
+					'@MS UI Gothic',
+					'@Malgun Gothic',
+					'@Meiryo',
+					'@Meiryo UI',
+					'MS Serif',
+					'Marlett',
+					'Modern',
+					'Script',
+					'Segoe Print',
+					'Segoe Script',
+					'Small Fonts',
+					'Impact'
+					])
 					
 		self.fontnames = [f for f in tkinter.font.families() if f not in self.badfonts]
 		

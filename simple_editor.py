@@ -32,6 +32,7 @@
 
 # from standard library
 import tkinter.scrolledtext
+import tkinter.colorchooser
 import tkinter.filedialog
 import tkinter.font
 import tkinter
@@ -111,17 +112,63 @@ GOODFONTS = [
 			'Liberation Mono',
 			'Inconsolata',
 			'Courier 10 Pitch',
-			'DejaVu Sans Mono'
+			'DejaVu Sans Mono',
+			'Courier'
 			]
 		
 BADFONTS = frozenset([
-			'Standard Symbols PS',
-			'OpenSymbol',
-			'Noto Color Emoji',
-			'FontAwesome',
-			'Droid Sans Fallback',
-			'D050000L'
-			])
+					'Standard Symbols PS',
+					'OpenSymbol',
+					'Noto Color Emoji',
+					'FontAwesome',
+					'Droid Sans Fallback',
+					'D050000L',
+					'Webdings',
+					'Wingdings',
+					'Symbol',
+					'Cambria Math',
+					'Batang',
+					'BatangChe',
+					'Dotum',
+					'DotumChe',
+					'Gulim',
+					'GulimChe',
+					'Gungsuh',
+					'GungsuhChe',
+					'MS Gothic',
+					'MS Mincho',
+					'MS PGothic',
+					'MS PMincho',
+					'MS UI Gothic',
+					'Malgun Gothic',
+					'Meiryo',
+					'Meiryo UI',
+					'@Batang',
+					'@BatangChe',
+					'@Dotum',
+					'@DotumChe',
+					'@Gulim',
+					'@GulimChe',
+					'@Gungsuh',
+					'@GungsuhChe',
+					'@MS Gothic',
+					'@MS Mincho',
+					'@MS PGothic',
+					'@MS PMincho',
+					'@MS UI Gothic',
+					'@Malgun Gothic',
+					'@Meiryo',
+					'@Meiryo UI',
+					'MS Serif',
+					'Marlett',
+					'Modern',
+					'Script',
+					'Segoe Print',
+					'Segoe Script',
+					'Small Fonts',
+					'Impact'
+					])
+					
 			
 ############ Constants End
 
@@ -194,7 +241,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-C>", self.comment)
 		self.contents.bind("<Control-X>", self.uncomment)
 		self.contents.bind("<Tab>", self.tab_override)
-		self.contents.bind("<ISO_Left_Tab>", self.unindent)
+		self.contents.bind("<Alt-j>", self.unindent)
 		self.contents.bind("<Control-a>", self.select_all)
 		self.contents.bind("<Control-z>", self.undo_override)
 		self.contents.bind("<Control-Z>", self.redo_override)
