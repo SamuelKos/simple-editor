@@ -32,7 +32,6 @@
 
 # from standard library
 import tkinter.scrolledtext
-import tkinter.colorchooser
 import tkinter.filedialog
 import tkinter.font
 import tkinter
@@ -112,8 +111,7 @@ GOODFONTS = [
 			'Liberation Mono',
 			'Inconsolata',
 			'Courier 10 Pitch',
-			'DejaVu Sans Mono',
-			'Courier'
+			'DejaVu Sans Mono'
 			]
 		
 BADFONTS = frozenset([
@@ -122,51 +120,7 @@ BADFONTS = frozenset([
 					'Noto Color Emoji',
 					'FontAwesome',
 					'Droid Sans Fallback',
-					'D050000L',
-					'Webdings',
-					'Wingdings',
-					'Symbol',
-					'Cambria Math',
-					'Batang',
-					'BatangChe',
-					'Dotum',
-					'DotumChe',
-					'Gulim',
-					'GulimChe',
-					'Gungsuh',
-					'GungsuhChe',
-					'MS Gothic',
-					'MS Mincho',
-					'MS PGothic',
-					'MS PMincho',
-					'MS UI Gothic',
-					'Malgun Gothic',
-					'Meiryo',
-					'Meiryo UI',
-					'@Batang',
-					'@BatangChe',
-					'@Dotum',
-					'@DotumChe',
-					'@Gulim',
-					'@GulimChe',
-					'@Gungsuh',
-					'@GungsuhChe',
-					'@MS Gothic',
-					'@MS Mincho',
-					'@MS PGothic',
-					'@MS PMincho',
-					'@MS UI Gothic',
-					'@Malgun Gothic',
-					'@Meiryo',
-					'@Meiryo UI',
-					'MS Serif',
-					'Marlett',
-					'Modern',
-					'Script',
-					'Segoe Print',
-					'Segoe Script',
-					'Small Fonts',
-					'Impact'
+					'D050000L'
 					])
 					
 			

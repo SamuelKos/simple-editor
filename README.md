@@ -1,7 +1,7 @@
 # simple-editor
 GUI-editor for Python development. 
-Tested to work with Debian Bullseye and Windows 7
-* Initially tested to work with Windows 7
+Tested to work with Debian Bullseye
+* Windows support is dumped. The strange problem with setting an icon comes back with win10, tried both 64 and 32 bit versions.
 
 # Featuring
 * Auto-indent
