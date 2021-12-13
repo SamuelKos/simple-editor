@@ -12,7 +12,7 @@
 # Tab Related
 # Configuration Related
 # Theme Related
-# Run file Related 
+# Run file Related
 # Overrides
 # Save and Load
 # Gotoline and Help
@@ -25,13 +25,14 @@
 ############ Stucture briefing End
 ############ TODO Begin
 
-# make pip package
+# relative paths?
 
 ############ TODO End
 ############ Imports Begin
 
 # from standard library
 import tkinter.scrolledtext
+import tkinter.colorchooser
 import tkinter.filedialog
 import tkinter.font
 import tkinter
@@ -41,9 +42,10 @@ import json
 import copy
 import os
 
+import pkg_resources
 
 # from current directory
-import changefont
+from . import changefont
 
 # for executing edited file in the same env than this editor, which is nice:
 # It means you have your installed dependencies available. By self.run()
@@ -92,14 +94,10 @@ class Tab:
 ###############################################################################
 
 ############ Constants Begin
-# YES you can do:
-# somepath = pathlib.Path('/a/b/c.txt')
-# print('path is: %s' % somepath) # etc.. So it is usable.
-
-# Interesting syntax, but good choise I think:
-ICONPATH = pathlib.Path.cwd() / 'icons' / 'editor.png'
-CONFPATH = pathlib.Path.cwd() / 'editor.cnf'
-HELPPATH = pathlib.Path.cwd() / 'help.txt'
+ICONPATH = 'editor.png'
+HELPPATH = 'help.txt'
+# keepin conf in cwd if user wants to do something with it 
+CONFPATH = pathlib.Path().cwd() /'editor.cnf'
 
 TAB_WIDTH = 4
 TAB_WIDTH_CHAR = ' '
@@ -152,16 +150,20 @@ class Editor(tkinter.Toplevel):
 		self.old_word = ''
 		self.new_word = ''
 		self.errlines = list()
+		self.lastdir = None
 		self.state = 'normal'
 		
-		if ICONPATH.exists():
+		if pkg_resources.resource_exists(__name__, ICONPATH):
+			realpath = pkg_resources.resource_filename(__name__, ICONPATH)
+			
 			try:
-				self.pic = tkinter.Image("photo", file=ICONPATH)
+				self.pic = tkinter.Image("photo", file=realpath)
 				self.tk.call('wm','iconphoto', self._w, self.pic)
 			except tkinter.TclError as e:
 				print(e)
 		
-		self.helptxt = HELPPATH.read_text()
+		if pkg_resources.resource_exists(__name__, HELPPATH):
+			self.helptxt = pkg_resources.resource_string(__name__, HELPPATH)
 		
 		# Layout Begin:
 		####################################################
@@ -195,7 +197,7 @@ class Editor(tkinter.Toplevel):
 		self.contents.bind("<Control-C>", self.comment)
 		self.contents.bind("<Control-X>", self.uncomment)
 		self.contents.bind("<Tab>", self.tab_override)
-		self.contents.bind("<Alt-j>", self.unindent)
+		self.contents.bind("<ISO_Left_Tab>", self.unindent)
 		self.contents.bind("<Control-a>", self.select_all)
 		self.contents.bind("<Control-z>", self.undo_override)
 		self.contents.bind("<Control-Z>", self.redo_override)
@@ -476,9 +478,11 @@ class Editor(tkinter.Toplevel):
 		
 		for tab in self.tabs:
 			tab.contents = ''
+			
+			# Convert tab.filepath to string for serialization
 			if tab.filepath:
-				# convert tab.filepath to relative path and to string for serialization
-				tab.filepath = tab.filepath.relative_to(tab.filepath.cwd()).__str__()
+				tab.filepath = tab.filepath.__str__()
+		
 		tmplist = [ tab.__dict__ for tab in self.tabs ]
 		dictionary['tabs'] = tmplist
 		
@@ -510,8 +514,6 @@ class Editor(tkinter.Toplevel):
 		
 		for tab in self.tabs:
 			if tab.type == 'normal':
-				tab.filepath = pathlib.Path.cwd() / tab.filepath
-				
 				try:
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
 						tab.contents = f.read()
@@ -1109,14 +1111,22 @@ class Editor(tkinter.Toplevel):
 			d.dirsbar.configure(elementborderwidth=self.elementborderwidth)
 			
 			# tmp is now absolute path
-			tmp = d.go('.', pattern='*.py')
-			
+			if self.lastdir:
+				tmp = d.go(self.lastdir.__str__(), pattern='*.py')
+			else:
+				tmp = d.go('.', pattern='*.py')
+
 			# avoid bell when dialog is closed without selection
 			if tmp == None:
 				self.entry.delete(0, tkinter.END)
 				if self.tabs[self.tabindex].filepath != None:
 					self.entry.insert(0, self.tabs[self.tabindex].filepath)
 				return
+			
+			else:
+				# update self.lastdir
+				 dirp = pathlib.Path().cwd() / tmp
+				 self.lastdir = pathlib.Path(*dirp.parts[:-1])
 			
 		# event should then be Return
 		else:
