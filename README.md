@@ -33,10 +33,10 @@ foo@bar:~$ sudo apt install python3-tk
 ```
 
 # About virtual environment, optional but highly recommended
-Consider creating virtual environment for your python-projects and installing python packages like this editor to it. In debian you have to first install this package: python-pip-whl:
+Consider creating virtual environment for your python-projects and installing python packages like this editor to it. In debian you have to first install this package: python3-venv:
 
 ```console
-foo@bar:~$ sudo apt install python-pip-whl
+foo@bar:~$ sudo apt install python3-venv
 ```
 
 Then save this script to file named 'mkvenv' to some place nice like bin-directory in your home-directory:
