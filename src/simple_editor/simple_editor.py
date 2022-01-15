@@ -39,7 +39,6 @@ import tkinter
 import pathlib
 import random
 import json
-import copy
 import os
 
 import pkg_resources
@@ -96,7 +95,7 @@ class Tab:
 ############ Constants Begin
 ICONPATH = 'editor.png'
 HELPPATH = 'help.txt'
-# keepin conf in cwd if user wants to do something with it 
+# keeping conf in cwd if user wants to do something with it 
 CONFPATH = pathlib.Path().cwd() /'editor.cnf'
 
 TAB_WIDTH = 4
@@ -117,6 +116,7 @@ BADFONTS = frozenset([
 					'OpenSymbol',
 					'Noto Color Emoji',
 					'FontAwesome',
+					'Dingbats',
 					'Droid Sans Fallback',
 					'D050000L'
 					])
@@ -507,22 +507,21 @@ class Editor(tkinter.Toplevel):
 
 		self.tabs = [ Tab(**item) for item in dictionary['tabs'] ]
 		
-		# To be able to update self.tabs we need this copy.
-		# I think it is because for loop silently 'breaks'
-		# if we remove items from the container we are iterating.
-		tmp = copy.copy(self.tabs)
+		# Have to step backwards here to avoid for-loop breaking
+		# while removing items from the container.
 		
-		for tab in self.tabs:
+		for i in range(len(self.tabs)-1, -1, -1):
+			tab = self.tabs[i]
+			
 			if tab.type == 'normal':
 				try:
 					with open(tab.filepath, 'r', encoding='utf-8') as f:
 						tab.contents = f.read()
+					tab.filepath = pathlib.Path(tab.filepath)
 				except EnvironmentError as e:
 					print(e.__str__())
-					tmp.remove(tab)
-					
-		self.tabs = tmp
-					
+					self.tabs.pop(i)
+			
 		for i,tab in enumerate(self.tabs):
 			if tab.active == True:
 				self.tabindex = i
@@ -641,10 +640,10 @@ class Editor(tkinter.Toplevel):
 		# or actually one Tcl-interpreter in single python-program or -console.
 		tmptop = tkinter.Toplevel()
 		tmptop.title('Choose Color')
-		tmptop.btnfg = tkinter.Button(tmptop, text='Change foreground color', font=('TkDefaultFont', 16), command=lambda args=['fg']: self.chcolor(args))
+		tmptop.btnfg = tkinter.Button(tmptop, text='Text color', font=('TkDefaultFont', 16), command=lambda args=['fg']: self.chcolor(args))
 		tmptop.btnfg.pack(padx=10, pady=10)
 		
-		tmptop.btnbg = tkinter.Button(tmptop, text='Change background color', font=('TkDefaultFont', 16), command=lambda args=['bg']: self.chcolor(args))
+		tmptop.btnbg = tkinter.Button(tmptop, text='Ref. color', font=('TkDefaultFont', 16), command=lambda args=['bg']: self.chcolor(args))
 		tmptop.btnbg.pack(padx=10, pady=10)
 		
 		tmptop.lb = tkinter.Listbox(tmptop, font=('TkDefaultFont', 12), selectmode=tkinter.SINGLE)
@@ -747,7 +746,6 @@ class Editor(tkinter.Toplevel):
 		filepath, errline = self.errlines[i]
 		
 		filepath = pathlib.Path(filepath)
-		
 		openfiles = [tab.filepath for tab in self.tabs]
 		
 		if filepath == self.tabs[self.tabindex].filepath:
@@ -760,7 +758,7 @@ class Editor(tkinter.Toplevel):
 					self.tabindex = i
 					self.tabs[self.tabindex].active = True
 					break
-		else:
+		else:		
 			try:
 				with open(filepath, 'r', encoding='utf-8') as f:
 					self.new_tab(error=True)
