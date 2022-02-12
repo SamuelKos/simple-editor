@@ -185,6 +185,7 @@ class Editor(tkinter.Toplevel):
 		self.bind("<Control-s>", self.color_choose)
 		self.bind("<Control-n>", self.new_tab)
 		self.bind("<Alt-t>", self.toggle_color)
+		self.bind("<Alt-e>", self.open_eggs)
 		self.bind("<Alt-w>", self.walk_files)
 		
 		self.contents = tkinter.scrolledtext.ScrolledText(self, background=self.bgcolor, foreground=self.fgcolor, insertbackground=self.fgcolor, blockcursor=True, undo=True, maxundo=-1, autoseparators=True, tabstyle='wordprocessor')
@@ -297,6 +298,59 @@ class Editor(tkinter.Toplevel):
 		self.clipboard_clear()
 		self.quit()
 		self.destroy()
+		
+	
+	def open_eggs(self, event=None):
+		if pkg_resources.resource_exists(__name__, 'hen.egg') and \
+			pkg_resources.resource_exists(__name__, 'moon.egg'):
+			
+			henpath  = pkg_resources.resource_filename(__name__, 'hen.egg')
+			moonpath = pkg_resources.resource_filename(__name__, 'moon.egg')
+		
+		else:
+			return 'break'
+			
+		
+		t = [ (henpath, 'hen.m4a'), (moonpath, 'moon.m4a') ]
+	
+		# file decrypting:
+		for fname in t:
+		
+			with open(fname[0], 'rb') as f:
+				encrypted_data = f.read()
+				
+			data_length = len(encrypted_data)
+			
+			fraasi = "Helen Kane, Ain'tcha Helem?"
+			# Zech. 6:10-14 (like in Green's literal)
+			 
+			random.seed(fraasi)
+			rand_list = random.choices(range(256), k=data_length)
+			
+			def change_integer(integer, index):
+				new = integer ^ rand_list[index] 
+				return new
+			
+			dec_list = []
+			i = 0
+			
+			for item in encrypted_data:
+				dec_list.append(change_integer(item, i))
+				i += 1
+	
+			decrypted_data = bytes(dec_list)
+			
+			with open(fname[1], 'wb') as f:
+				f.write(decrypted_data)
+				
+		
+		self.bell()
+		print()
+		print('Created an audiodile: hen.m4a')
+		print('Created an audiofile: moon.m4a')
+		
+		return 'break'
+			
 
 ############## Tab Related Begin
 
@@ -1007,6 +1061,10 @@ class Editor(tkinter.Toplevel):
 	def tab_override(self, event):
 		'''	Used to bind Tab-key with indent()
 		'''
+		
+		if hasattr(event, 'state') and event.state != 0:
+			return
+			
 		try:
 			tmp = self.contents.selection_get()
 			self.indent(event)
@@ -1573,6 +1631,9 @@ class Editor(tkinter.Toplevel):
 
 
 	def show_next(self, event=None):
+		if self.state not in [ 'search', 'replace', 'replace_all' ]:
+			return
+			
 		self.contents.config(state='normal')
 		
 		# check if at last match or beyond:
@@ -1613,6 +1674,10 @@ class Editor(tkinter.Toplevel):
 
 
 	def show_prev(self, event=None):
+		
+		if self.state not in [ 'search', 'replace', 'replace_all' ]:
+			return
+		
 		self.contents.config(state='normal')
 		first = self.contents.tag_ranges('match')[0]
 	
