@@ -125,5 +125,24 @@ foo@bar:~/myproject$ source env/bin/activate
 >>> e=simple_editor.Editor()
 ```
 
+# Developing
+
+```console
+foo@bar:~/myproject$ mkvenv env
+foo@bar:~/myproject$ . env/bin/activate
+(env) foo@bar:~/myproject$ git clone https://github.com/SamuelKos/simple-editor
+(env) foo@bar:~/myproject$ cd simple-editor
+(env) foo@bar:~/myproject/simple-editor$ pip install -e .
+```
+
+If you currently have no internet but have previously installed virtual environment which has pip and setuptools and you have downloaded simple-editor repository:
+
+```console
+(env) foo@bar:~/myproject/simple-editor$ pip install --no-build-isolation -e .
+```
+
+Files are in src/simple-editor/
+
+
 # Licence
 This project is licensed under the terms of the GNU General Public License v3.0.

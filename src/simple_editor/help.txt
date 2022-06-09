@@ -30,10 +30,14 @@
 		Ctrl-minus	Decrease scrollbar-width
 
 		While searching:
-		Alt-n  Next match
-		Alt-p  Prev match
+			Alt-n  Next match
+			Alt-p  Prev match
+			-	copying text to clipboard is possible
+			-	press or select text where you want cursor to
+				be after closing searching with esc. Otherwise
+				cursor will remain where you left it.
 		
-		
+	
 	When is my file Saved to Disk?
 	
 		All tabs are saved to disk when:
@@ -60,11 +64,13 @@
 
 	About save-button:
 	  - To create a new file, add filename to entry and press save.
-		It will be saved to disk in above mentioned situations.
+	  	This creates an empty file like 'touch'. This is done to 
+		ensure filepath is ok. Contents will be saved to disk in
+		above mentioned situations.
 	  
 	  - If a file was already open and user changed filename in entry,
 		old file is first saved (but not to disk) and then new file with
-		same content is created in a new tab (it is not yet in disk).
+		same content is created in a new tab (its contents are not yet in disk).
 	  
 	  - Pressing save in tab which exists in disk does not do anything.
 	  - Contents of tabs without filename are not saved when closing tab,
@@ -75,9 +81,9 @@
 	  - When in tab without filename, files can be opened from entry
 		or by pressing button.
 	  
-	  - If tab had filename and user changed filename in entry,
-		old file is first saved to disk and closed, then filepath in
-		entry is opened in the same tab.
+	  - If tab had filename and user changed filename in entry and
+		user presses enter: old file is first saved to disk and closed,
+		then filepath in entry is opened in the same tab.
 		
 	  - If entered filename in entry and pressed open, entry is ignored.
 	
@@ -98,10 +104,11 @@
 		for possible runtime-errors, keep that in mind. You should
 		be able to terminate your program with ctrl-c from python-console.
 	
-	  - If you know where in your code that runtime-error occurs, put
-		breakpoint() there, exit editor and python-console and run from terminal:
+	  - If you know where in your code that runtime-error occurs, put 
+		breakpoint() there, exit editor and python-console and run
+		from terminal:
 		
-		python3 program_with_error.py
+		python program_with_error.py
 		
 		and it will exit to python debugger after your breakpoint.
 		
